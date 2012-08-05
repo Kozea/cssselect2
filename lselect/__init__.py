@@ -187,34 +187,40 @@ def translate(selector):
         if selector.name == 'lang':
             if selector.argument_types() not in (['STRING'], ['IDENT']):
                 raise TypeError(selector.arguments)
-            # TODO
-            expr = '0'  # Like 'False', but without a global lookup
-
-        a, b = cssselect.parser.parse_series(selector.arguments)  # may raise
-        # x is the number of siblings before/after the element
-        # n is a positive or zero integer
-        # x = a*n + b-1
-        # x = a*n + B
-        B = b - 1
-        if a == 0:
-            # x = B
-            test = 'sum(1 for _ in %%s) == %s' % B
+            name = 'lang'  # TODO: make this configurable.
+            universal = cssselect.parser.Element()
+            lang = selector.arguments[0].value
+            # TODO: matching should be case-insensitive
+            lang = cssselect.parser.Attrib(universal, None, name, '|=', lang)
+            ancestor = cssselect.parser.CombinedSelector(lang, ' ', universal)
+            expr = '(%s or %s)' % (translate(lang), translate(ancestor))
         else:
-            # n = (x-B) / a
-            # Empty list for False, non-empty list for True
-            test = ('[1 for n, r in [divmod(sum(1 for _ in %%s) - %s, %s)]'
-                    ' if r == 0 and n >= 0]' % (B, a))
+            # May raise:
+            a, b = cssselect.parser.parse_series(selector.arguments)
+            # x is the number of siblings before/after the element
+            # n is a positive or zero integer
+            # x = a*n + b-1
+            # x = a*n + B
+            B = b - 1
+            if a == 0:
+                # x = B
+                test = 'sum(1 for _ in %%s) == %s' % B
+            else:
+                # n = (x-B) / a
+                # Empty list for False, non-empty list for True
+                test = ('[1 for n, r in [divmod(sum(1 for _ in %%s) - %s, %s)]'
+                        ' if r == 0 and n >= 0]' % (B, a))
 
-        if selector.name == 'nth-child':
-            expr = test % 'el.itersiblings(preceding=True)'
-        elif selector.name == 'nth-last-child':
-            expr = test % 'el.itersiblings()'
-        elif selector.name == 'nth-of-type':
-            expr = test % 'el.itersiblings(el.tag, preceding=True)'
-        elif selector.name == 'nth-last-of-type':
-            expr = test % 'el.itersiblings(el.tag)'
-        else:
-            raise ValueError('Unknown pseudo-class', selector.name)
+            if selector.name == 'nth-child':
+                expr = test % 'el.itersiblings(preceding=True)'
+            elif selector.name == 'nth-last-child':
+                expr = test % 'el.itersiblings()'
+            elif selector.name == 'nth-of-type':
+                expr = test % 'el.itersiblings(el.tag, preceding=True)'
+            elif selector.name == 'nth-last-of-type':
+                expr = test % 'el.itersiblings(el.tag)'
+            else:
+                raise ValueError('Unknown pseudo-class', selector.name)
 
     elif isinstance(selector, cssselect.parser.Negation):
         test = translate(selector.subselector)

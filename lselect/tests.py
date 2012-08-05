@@ -66,9 +66,14 @@ def test_select():
     assert pcss('*[lang|="en"]', '[lang|="en-US"]') == []
     assert pcss('*[lang|="e"]') == []
     # ... :lang() is not.
-#    assert pcss(':lang("EN")', '*:lang(en-US)', html_only=True) == [
-#        'second-li', 'li-div']
-#    assert pcss(':lang("e")', html_only=True) == []
+    assert pcss(
+        #':lang("EN")', '*:lang(en-US)'
+        ':lang(En)'
+    #, html_only=True
+    ) == [
+        'second-li', 'li-div']
+    assert pcss(':lang("e")'#, html_only=True
+    ) == []
     assert pcss('li:nth-child(3)') == ['third-li']
     assert pcss('li:nth-child(10)') == []
     assert pcss('li:nth-child(2n)', 'li:nth-child(even)',
