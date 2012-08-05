@@ -21,4 +21,5 @@ setup(
     url='http://packages.python.org/lselect/',
     license='BSD',
     packages=['lselect'],
+    install_requires=['cssselect']
 )

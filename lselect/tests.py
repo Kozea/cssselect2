@@ -10,9 +10,13 @@
 
 """
 
-from . import VERSION
+from . import parse
 
 
-def test_version():
-    """Dummy test to show that the import works."""
-    assert VERSION.startswith('0')
+def test_foo():
+    """Dummy test to show that the import works
+    and running half the code does not crash.
+
+    """
+    assert parse('* a > b|* + c|d ~ .e#f[g][g=h][g~=h][g|=h]:link'
+                 ':not(:nth-last-of-type(3n-5))')
