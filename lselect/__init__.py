@@ -10,6 +10,8 @@
 
 """
 
+# We’re currently using the parser from cssselect.
+# Eventually there will be a custom parser based on the tokenizer from tinycss.
 import cssselect
 import cssselect.parser
 
