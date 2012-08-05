@@ -23,30 +23,13 @@ except NameError:
     unicode = str  # Python 3
 
 
-class _State(object):
-    """Keeps track of identifiers in the generated Python code."""
-    def __init__(self):
-        self.element_id = 0
-
-    def identifier(self):
-        return 'el_%s' % self.element_id
-
-    def next_identifier(self):
-        self.element_id += 1
-
-
 def compile_selector(selector):
     """Return a (element -> bool) callable."""
-    state = _State()
-    element = state.identifier()
-    expr = translate(selector, state)
-    return eval('lambda %s: %s' % (element, expr), {}, {})
+    return eval('lambda el: ' + translate(selector), {}, {})
 
 
-def translate(selector, state):
+def translate(selector):
     """Return a Python expression as a string."""
-    element = state.identifier()
-
     if isinstance(selector, bytes):
         selector = selector.decode('ascii')
         # fall through to unicode
@@ -54,7 +37,7 @@ def translate(selector, state):
     if isinstance(selector, unicode):
         expressions = [expr
                        for sel in cssselect.parse(selector)
-                       for expr in [translate(sel.parsed_tree, state)]
+                       for expr in [translate(sel.parsed_tree)]
                        # 0 or x == x
                        if expr != '0']
         if not expressions:
@@ -69,47 +52,40 @@ def translate(selector, state):
         tag = selector.element
         if ns and tag:
             tag = '{%s}%s' % (ns, tag)
-            return '(%s.tag == %r)' % (element, tag)
+            return 'el.tag == %r' % tag
         elif ns:
             ns = '{%s}' % ns
-            return '(%s.tag.startswith(%r))' % (element, tag)
+            return 'el.tag.startswith(%r)' % tag
         elif tag:
-            return '(%s.tag.rsplit("}", 1)[-1] == %r)' % (element, tag)
+            return 'el.tag.rsplit("}", 1)[-1] == %r' % tag
         else:
             return '1'  # Like 'True', but without a global lookup
 
     elif isinstance(selector, cssselect.parser.CombinedSelector):
-        right = translate(selector.subselector, state)
-        if right == '0':
-            return right
-        state.next_identifier()
-        next_element = state.identifier()
-        left = translate(selector.selector, state)
+        left = translate(selector.selector)
         if left == '0':
             return left
         # No shortcut if left == '1', the element matching left needs to exist.
 
         if selector.combinator == ' ':
-            left = 'any(%s for %s in %s.iterancestors())' % (
-                left, next_element, element)
+            left = 'any(%s for el in el.iterancestors())' % left
         elif selector.combinator == '>':
-            left = (
-                # Empty list for False, non-empty list for True
-                '[1 for %s in [%s.getparent()] if %s is not None and %s]'
-                % (next_element, element, next_element, left))
+            # Empty list for False, non-empty list for True
+            left = ('[1 for el in [el.getparent()] if el is not None and %s]'
+                    % left)
         elif selector.combinator == '+':
-            left = (
-                # Empty list for False, non-empty list for True
-                '[1 for %s in [%s.getprevious()] if %s is not None and %s]'
-                % (next_element, element, next_element, left))
+            left = ('[1 for el in [el.getprevious()] if el is not None and %s]'
+                    % left)
         elif selector.combinator == '~':
-            left = 'any(%s for %s in %s.itersiblings(preceding=True))' % (
-                left, next_element, element)
+            left = 'any(%s for el in el.itersiblings(preceding=True))' % left
         else:
             raise ValueError('Unknown combinator', selector.combinator)
 
-        if right == '1':
-            return left
+        right = translate(selector.subselector)
+        if right == '0':
+            return right  # 0 and x == 0
+        elif right == '1':
+            return left  # 1 and x == x
         else:
             # Evaluate combinators right to left:
             return '%s and %s' % (right, left)
@@ -117,19 +93,17 @@ def translate(selector, state):
     elif isinstance(selector, cssselect.parser.Class):
         assert selector.class_name  # syntax does not allow empty identifiers
         name = 'class'  # TODO: make this configurable.
-        selector = cssselect.parser.Attrib(
-            selector.selector, None, name, '~=', selector.class_name)
-        return translate(selector, state)
+        return translate(cssselect.parser.Attrib(
+            selector.selector, None, name, '~=', selector.class_name))
 
     elif isinstance(selector, cssselect.parser.Hash):
         assert selector.id  # syntax does not allow empty identifiers
         name = 'id'  # TODO: make this configurable.
-        selector = cssselect.parser.Attrib(
-            selector.selector, None, name, '=', selector.id)
-        return translate(selector, state)
+        return translate(cssselect.parser.Attrib(
+            selector.selector, None, name, '=', selector.id))
 
     # This is common to all remaining types of selector:
-    rest = translate(selector.selector, state)
+    rest = translate(selector.selector)
     if rest == '0':
         return rest
     elif rest == '1':
@@ -142,9 +116,9 @@ def translate(selector, state):
         name = selector.attrib
         value = selector.value
         if selector.operator == 'exists':
-            expr = '%s.get(%r) is not None' % (element, name)
+            expr = 'el.get(%r) is not None' % name
         elif selector.operator == '=':
-            expr = '%s.get(%r) == %r' % (element, name, value)
+            expr = 'el.get(%r) == %r' % (name, value)
         elif selector.operator == '~=':
             if len(value.split()) != 1 or value.strip() != value:
                 # Optimization only, the else clause should have
@@ -152,37 +126,34 @@ def translate(selector, state):
                 expr = '0'  # Like 'False', but without a global lookup
             else:
                 # TODO: only split on ASCII whitespace
-                expr = '%r in %s.get(%r, "").split()' % (value, element, name)
+                expr = '%r in el.get(%r, "").split()' % (value, name)
         elif selector.operator == '|=':
             # Empty list for False, non-empty list for True
-            expr = ('[1 for value in [%s.get(%r)] if value == %r or'
+            expr = ('[1 for value in [el.get(%r)] if value == %r or'
                     ' (value is not None and value.startswith(%r))]'
-                    % (element, name, value, value + '-'))
+                    % (name, value, value + '-'))
         elif selector.operator == '^=':
             if value:
-                expr = '%s.get(%r, "").startswith(%r)' % (
-                    element, name, value)
+                expr = 'el.get(%r, "").startswith(%r)' % (name, value)
             else:
                 expr = '0'  # Like 'False', but without a global lookup
         elif selector.operator == '$=':
             if value:
-                expr = '%s.get(%r, "").endswith(%r)' % (
-                    element, name, value)
+                expr = 'el.get(%r, "").endswith(%r)' % (name, value)
             else:
-                expr = '0'  # Like 'False', but without a global lookup
+                expr = '0'
         elif selector.operator == '*=':
             if value:
-                expr = '%r in %s.get(%r, "")' % (
-                    value, element, name)
+                expr = '%r in el.get(%r, "")' % (value, name)
             else:
-                expr = '0'  # Like 'False', but without a global lookup
+                expr = '0'
         else:
             raise ValueError('Unknown attribute operator', selector.operator)
 
     elif isinstance(selector, cssselect.parser.Pseudo):
         if selector.ident == 'link':
             # XXX HTML-only
-            expr = translate('a[href]', state)
+            expr = translate('a[href]')
         elif selector.ident in ('visited', 'hover', 'active', 'focus',
                                 'target'):
             expr = '0'  # Like 'False', but without a global lookup
@@ -190,28 +161,24 @@ def translate(selector, state):
             # TODO
             expr = '0'  # Like 'False', but without a global lookup
         elif selector.ident == 'root':
-            expr = element + '.getparent() is None'
+            expr = 'el.getparent() is None'
         elif selector.ident == 'first-child':
-            expr = element + '.getprevious() is None'
+            expr = 'el.getprevious() is None'
         elif selector.ident == 'last-child':
-            expr = element + '.getnext() is None'
+            expr = 'el.getnext() is None'
         elif selector.ident == 'first-of-type':
-            expr = ('next(%s.itersiblings(%s.tag, preceding=True), None)'
-                    ' is None' % (element, element))
+            expr = ('next(el.itersiblings(el.tag, preceding=True), None)'
+                    ' is None')
         elif selector.ident == 'last-of-type':
-            expr = 'next(%s.itersiblings(%s.tag), None) is None' % (
-                element, element)
+            expr = 'next(el.itersiblings(el.tag), None) is None'
         elif selector.ident == 'only-child':
-            expr = '%s.getprevious() is None and %s.getnext() is None' % (
-                element, element)
+            expr = 'el.getprevious() is None and el.getnext() is None'
         elif selector.ident == 'only-of-type':
-            expr = ('next(%s.itersiblings(%s.tag, preceding=True), None)'
+            expr = ('next(el.itersiblings(el.tag, preceding=True), None)'
                     ' is None and '
-                    'next(%s.itersiblings(%s.tag), None) is None'
-                    % (element, element, element, element))
+                    'next(el.itersiblings(el.tag), None) is None')
         elif selector.ident == 'empty':
-            expr = ('next(%s.iterchildren(), None) is None and (not %s.text)'
-                    % (element, element))
+            expr = 'next(el.iterchildren(), None) is None and (not el.text)'
         else:
             raise ValueError('Unknown pseudo-class', selector.ident)
 
@@ -239,19 +206,18 @@ def translate(selector, state):
                     ' if r == 0 and n >= 0]' % (B, a))
 
         if selector.name == 'nth-child':
-            expr = test % '%s.itersiblings(preceding=True)' % element
+            expr = test % 'el.itersiblings(preceding=True)'
         elif selector.name == 'nth-last-child':
-            expr = test % '%s.itersiblings()' % element
+            expr = test % 'el.itersiblings()'
         elif selector.name == 'nth-of-type':
-            expr = test % '%s.itersiblings(%s.tag, preceding=True)' % (
-                element, element)
+            expr = test % 'el.itersiblings(el.tag, preceding=True)'
         elif selector.name == 'nth-last-of-type':
-            expr = test % '%s.itersiblings(%s.tag)' % (element, element)
+            expr = test % 'el.itersiblings(el.tag)'
         else:
             raise ValueError('Unknown pseudo-class', selector.name)
 
     elif isinstance(selector, cssselect.parser.Negation):
-        test = translate(selector.subselector, state)
+        test = translate(selector.subselector)
         if test == '0':
             expr = '1'
         elif test == '1':
