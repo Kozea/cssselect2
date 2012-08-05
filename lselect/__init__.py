@@ -23,7 +23,7 @@ except NameError:
     unicode = str  # Python 3
 
 
-def parse(selector):
+def compile_selector(selector):
     def dashmatch(name, value, sub):
         def test(el):
             attr = el.get(name)
@@ -42,9 +42,13 @@ def parse(selector):
             return lambda el: value in el.get(name, '').split() and sub(el)
 
 
+    if isinstance(selector, bytes):
+        selector = selector.decode('ascii')
+
     if isinstance(selector, unicode):
-        selector, = cssselect.parse(selector)
-        return parse(selector.parsed_tree)
+        subs = [compile_selector(sel.parsed_tree)
+                for sel in cssselect.parse(selector)]
+        return lambda el: any(sub(el) for sub in subs)
 
     elif isinstance(selector, cssselect.parser.Element):
         ns = selector.namespace
@@ -64,7 +68,7 @@ def parse(selector):
         assert selector.namespace is None  # TODO handle namespaced attributes
         name = selector.attrib
         value = selector.value
-        sub = parse(selector.selector)
+        sub = compile_selector(selector.selector)
         if selector.operator == 'exists':
             return lambda el: el.get(name) is not None and sub(el)
         elif selector.operator == '=':
@@ -94,15 +98,16 @@ def parse(selector):
     elif isinstance(selector, cssselect.parser.Class):
         assert selector.class_name  # syntax does not allow empty identifiers
         name = 'class'  # TODO: make this configurable.
-        return includes(name, selector.class_name, parse(selector.selector))
+        return includes(name, selector.class_name,
+                        compile_selector(selector.selector))
 
     elif isinstance(selector, cssselect.parser.Hash):
         assert selector.id  # syntax does not allow empty identifiers
         name = 'id'  # TODO: make this configurable.
-        return includes(name, selector.id, parse(selector.selector))
+        return includes(name, selector.id, compile_selector(selector.selector))
 
     elif isinstance(selector, cssselect.parser.Pseudo):
-        sub = parse(selector.selector)
+        sub = compile_selector(selector.selector)
         if selector.ident == 'link':
             # XXX HTML-only
             return lambda el: (el.tag == 'a' and el.get('href') is not None
@@ -115,11 +120,11 @@ def parse(selector):
             return lambda el: False
         elif selector.ident == 'root':
             return lambda el: el.getparent() is None and sub(el)
-        elif selector.ident == 'fist-child':
+        elif selector.ident == 'first-child':
             return lambda el: el.getprevious() is None and sub(el)
         elif selector.ident == 'last-child':
             return lambda el: el.getnext() is None and sub(el)
-        elif selector.ident == 'fist-of-type':
+        elif selector.ident == 'first-of-type':
             return lambda el: (
                 next( el.itersiblings(el.tag, preceding=True), None) is None
                 and sub(el))
@@ -136,62 +141,76 @@ def parse(selector):
                 and next(el.itersiblings(el.tag), None) is None
                 and sub(el))
         elif selector.ident == 'empty':
-            return lambda el: next(el.iterchidren(), None) is None and sub(el)
+            return lambda el: (next(el.iterchildren(), None) is None
+                               and (not el.text) and sub(el))
+        else:
+            raise ValueError('Unknown pseudo-class', selector.ident)
 
 
     elif isinstance(selector, cssselect.parser.Function):
-        sub = parse(selector.selector)
+        sub = compile_selector(selector.selector)
         if selector.name == 'lang':
             if selector.argument_types() not in (['STRING'], ['IDENT']):
                 raise TypeError(selector.arguments)
             # TODO
             return lambda el: False
+        elif selector.name == 'nth-child':
+            sel = lambda el: test(el.itersiblings(preceding=True)) and sub(el)
+        elif selector.name == 'nth-last-child':
+            sel = lambda el: test(el.itersiblings()) and sub(el)
+        elif selector.name == 'nth-of-type':
+            sel = lambda el: (test(el.itersiblings(el.tag, preceding=True))
+                               and sub(el))
+        elif selector.name == 'nth-last-of-type':
+            sel = lambda el: test(el.itersiblings(el.tag)) and sub(el)
+        else:
+            raise ValueError('Unknown pseudo-class', selector.name)
 
         a, b = cssselect.parser.parse_series(selector.arguments)  # may raise
-        # We test for a*n + b-1 siblings before or after the element:
-        b -= 1
-        if selector.name == 'nth-child':
-            return lambda el: sum(1 for _ in
-                el.itersiblings(preceding=True)) % a == b and sub(el)
-        elif selector.name == 'nth-last-child':
-            return lambda el: sum(1 for _ in
-                el.itersiblings()) % a == b and sub(el)
-        elif selector.name == 'nth-of-type':
-            return lambda el: sum(1 for _ in
-                el.itersiblings(el.tag, preceding=True)) % a == b and sub(el)
-        elif selector.name == 'nth-last-of-type':
-            return lambda el: sum(1 for _ in
-                el.itersiblings(el.tag)) % a == b and sub(el)
+        # x is the number of siblings before/after the element
+        # n is a positive or zero integer
+        # x = a*n + b-1
+        # x = a*n + B
+        B = b - 1
+        if a == 0:
+            # x = B
+            test = lambda siblings: sum(1 for _ in siblings) == B
+        else:
+            # n = (x-B) / a
+            def test(siblings):
+                n, r = divmod(sum(1 for _ in siblings) - B, a)
+                return r == 0 and n >= 0
+        return sel
 
     elif isinstance(selector, cssselect.parser.Negation):
-        sub = parse(selector.selector)
-        test = parse(selector.subselector)
+        sub = compile_selector(selector.selector)
+        test = compile_selector(selector.subselector)
         return lambda el: (not test(el)) and sub(el)
 
     elif isinstance(selector, cssselect.parser.CombinedSelector):
-        left = parse(selector.selector)
-        right = parse(selector.subselector)
+        left = compile_selector(selector.selector)
+        right = compile_selector(selector.subselector)
         if selector.combinator == ' ':
-            return lambda el: left(el) and any(
-                right(ancestor) for ancestor in right.iterancestors())
+            return lambda el: right(el) and any(
+                left(ancestor) for ancestor in el.iterancestors())
         elif selector.combinator == '>':
             def child_test(el):
-                if not left(el):
+                if not right(el):
                     return False
                 parent = el.getparent()
-                return parent is not None and right(parent)
+                return parent is not None and left(parent)
             return child_test
         elif selector.combinator == '+':
             def sibling_test(el):
-                if not left(el):
+                if not right(el):
                     return False
                 previous = el.getprevious()
-                return previous is not None and right(previous)
+                return previous is not None and left(previous)
             return sibling_test
         elif selector.combinator == '~':
-            return lambda el: left(el) and any(
-                right(sibl) for sibl in right.itersiblings(preceding=True))
+            return lambda el: right(el) and any(
+                left(sibl) for sibl in el.itersiblings(preceding=True))
         else:
             raise ValueError('Unknown combinator', selector.combinator)
     else:
-        raise TypeError(selector)
+        raise TypeError(type(selector), selector)
