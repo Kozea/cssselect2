@@ -12,30 +12,22 @@
 
 import re
 
-from tinycss.tokenizer import tokenize_grouped
 from tinycss.parsing import ParseError, strip_whitespace
 
 
-__all__ = ['parse_string', 'parse']
-
-
-def parse_string(string, namespaces=None):
-    if isinstance(string, bytes):
-        string = string.decode('ascii')
-    return list(parse(tokenize_grouped(string), namespaces))
+__all__ = ['parse']
 
 
 def parse(tokens, namespaces=None):
     tokens = TokenStream(tokens)
     namespaces = namespaces or {}
-    selectors = []
-    selectors.append(parse_selector(tokens, namespaces))
+    yield parse_selector(tokens, namespaces)
     while 1:
         next = tokens.next()
         if next.type == 'EOF':
-            return selectors
+            return
         elif next.type == ',':
-            selectors.append(parse_selector(tokens, namespaces))
+            yield parse_selector(tokens, namespaces)
         else:
             raise SelectorError(next, 'unpexpected %s token.' % next.type)
 

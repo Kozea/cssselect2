@@ -10,40 +10,89 @@
 
 """
 
+from tinycss.tokenizer import tokenize_grouped
+
 from . import parser
 
 
 VERSION = '0.1a0'
 
 
-try:
-    unicode
-except NameError:
-    unicode = str  # Python 3
+def compile_string(string, namespaces=None):
+    """Compile a list of selectors.
+
+    :param string:
+        The selectors, as a string. Can be either a single selector or a list
+        of comma-separated selectors, as in CSS stylesheets.
+    :param namespaces:
+        A dictionary of all `namespace prefix declarations
+        <http://www.w3.org/TR/selectors/#nsdecl>`_ in scope for this selector.
+        Keys are namespace prefixes as strings, or ``None`` for the default
+        namespace. Values are namespace URIs.
+    :returns:
+        An opaque object to be passed to :func:`match` or :func:`match_simple`.
+
+    """
+    if isinstance(string, bytes):
+        string = string.decode('ascii')
+    return compile_tokens(tokenize_grouped(string), namespaces)
 
 
-def compile_selector(selector):
-    """Return a (element -> bool) callable."""
-    return eval('lambda el: ' + translate(selector), {}, {})
+def compile_tokens(tokens, namespaces=None):
+    """Same as :func:`compile_string`, but the input is a list of tinycss
+    "grouped" tokens rather than a string.
+
+    """
+    return [(selector, eval('lambda el: ' + _translate(selector.parsed_tree),
+                            {}, {}))
+            for selector in parser.parse(tokens, namespaces)]
 
 
-def translate(selector):
+def match(tree, selectors):
+    """Match selectors against a document.
+
+    :param tree:
+        An lxml Element or ElementTree object.
+    :param selectors:
+        A list of ``(selector, data)`` tuples. ``selector`` is a result from
+        :func:`compile_string` or :func:`compile_tokens`. ``data`` can be
+        any object associated to the selector (such as a declaration block)
+        and is returned in the results.
+    :returns:
+        A generator of ``(element, pseudo_element, specificity, data)``.
+        The order of results is unspecified.
+
+    """
+    selectors = [(selector, test, data)
+                 for selector_list, data in selectors
+                 for selector, test in selector_list]
+    for element in tree.iter():
+        for selector, test, data in selectors:
+            if test(element):
+                yield (element, selector.pseudo_element,
+                       selector.specificity, data)
+
+
+def match_simple(tree, *selectors):
+    """Match selectors against a document.
+
+    :param tree:
+        An lxml Element or ElementTree object.
+    :param *selectors:
+        Results from :func:`compile_string` or :func:`compile_tokens`.
+    :returns:
+        A set of elements.
+
+    """
+    results = match(tree, [(sel, None) for sel in selectors])
+    return set(element for element, pseudo_element, _, _ in results
+               if pseudo_element is None)
+
+
+def _translate(selector):
     """Return a Python expression as a string."""
-    if isinstance(selector, (bytes, unicode)):
-        expressions = [expr
-                       for sel in parser.parse_string(selector)
-                       for expr in [translate(sel.parsed_tree)]
-                       # 0 or x == x
-                       if expr != '0']
-        if not expressions:
-            return '0'  # any([]) == False
-        elif '1' in expressions:
-            return '1'  # 1 or x == 1
-        else:
-            return ' or '.join(expressions)
-
-    elif isinstance(selector, parser.CombinedSelector):
-        left = translate(selector.left)
+    if isinstance(selector, parser.CombinedSelector):
+        left = _translate(selector.left)
         if left == '0':
             return left
         # No shortcut if left == '1', the element matching left needs to exist.
@@ -65,7 +114,7 @@ def translate(selector):
         else:
             raise ValueError('Unknown combinator', selector.combinator)
 
-        right = translate(selector.right)
+        right = _translate(selector.right)
         if right == '0':
             return right  # 0 and x == 0
         elif right == '1':
@@ -76,9 +125,10 @@ def translate(selector):
 
     elif isinstance(selector, parser.CompoundSelector):
         if len(selector.simple_selectors) == 1:
-            return translate(selector.simple_selectors[0])
+            return _translate(selector.simple_selectors[0])
         assert selector.simple_selectors
-        return '(%s)' % ' and '.join(map(translate, selector.simple_selectors))
+        return '(%s)' % ' and '.join(map(
+            _translate, selector.simple_selectors))
 
     elif isinstance(selector, parser.ElementTypeSelector):
         ns = selector.namespace
@@ -102,13 +152,13 @@ def translate(selector):
     elif isinstance(selector, parser.ClassSelector):
         assert selector.class_name  # syntax does not allow empty identifiers
         name = 'class'  # TODO: make this configurable.
-        return translate(parser.AttributeSelector(
+        return _translate(parser.AttributeSelector(
             None, name, '~=', selector.class_name))
 
     elif isinstance(selector, parser.IDSelector):
         assert selector.ident  # syntax does not allow empty identifiers
         name = 'id'  # TODO: make this configurable.
-        return translate(parser.AttributeSelector(
+        return _translate(parser.AttributeSelector(
             None, name, '=', selector.ident))
 
     elif isinstance(selector, parser.AttributeSelector):
@@ -153,7 +203,7 @@ def translate(selector):
     elif isinstance(selector, parser.PseudoClassSelector):
         if selector.name == 'link':
             # XXX HTML-only
-            return translate('a[href]')
+            return _translate('a[href]')
         elif selector.name in ('visited', 'hover', 'active', 'focus',
                                 'target'):
             return '0'  # Like 'False', but without a global lookup
@@ -190,7 +240,7 @@ def translate(selector):
             lang = parser.AttributeSelector(None, name, '|=', lang)
             ancestor = parser.CombinedSelector(
                 lang, ' ', parser.UniversalSelector(any))
-            return '(%s or %s)' % (translate(lang), translate(ancestor))
+            return '(%s or %s)' % (_translate(lang), _translate(ancestor))
         else:
             a, b = selector.parse_nth_child()
             # x is the number of siblings before/after the element
@@ -200,11 +250,11 @@ def translate(selector):
             B = b - 1
             if a == 0:
                 # x = B
-                test = 'sum(1 for _ in %%s) == %s' % B
+                test = 'sum(1 for _ in %%s) == %i' % B
             else:
                 # n = (x-B) / a
                 # Empty list for False, non-empty list for True
-                test = ('[1 for n, r in [divmod(sum(1 for _ in %%s) - %s, %s)]'
+                test = ('[1 for n, r in [divmod(sum(1 for _ in %%s) - %i, %i)]'
                         ' if r == 0 and n >= 0]' % (B, a))
 
             if selector.name == 'nth-child':
@@ -219,7 +269,7 @@ def translate(selector):
                 raise ValueError('Unknown pseudo-class', selector.name)
 
     elif isinstance(selector, parser.NegationSelector):
-        test = translate(selector.sub_selector)
+        test = _translate(selector.sub_selector)
         if test == '0':
             return '1'
         elif test == '1':
