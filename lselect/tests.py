@@ -67,12 +67,12 @@ def test_select():
     assert pcss('*[lang|="e"]') == []
     # ... :lang() is not.
     assert pcss(
-        #':lang("EN")', '*:lang(en-US)'
+        #':lang(EN)', '*:lang(en-US)'
         ':lang(En)'
     #, html_only=True
     ) == [
         'second-li', 'li-div']
-    assert pcss(':lang("e")'#, html_only=True
+    assert pcss(':lang(e)'#, html_only=True
     ) == []
     assert pcss('li:nth-child(3)') == ['third-li']
     assert pcss('li:nth-child(10)') == []
@@ -96,20 +96,13 @@ def test_select():
     assert pcss('span:only-child') == ['foobar-span']
     assert pcss('div:only-child') == ['li-div']
     assert pcss('div *:only-child') == ['li-div', 'foobar-span']
-#    self.assertRaises(ExpressionError, pcss, 'p *:only-of-type')
+    assert pcss('p *:only-of-type') == ['p-em', 'fieldset']
     assert pcss('p:only-of-type') == ['paragraph']
     assert pcss('a:empty', 'a:EMpty') == ['name-anchor']
     assert pcss('li:empty') == [
         'third-li', 'fourth-li', 'fifth-li', 'sixth-li']
     assert pcss(':root', 'html:root') == ['html']
     assert pcss('li:root', '* :root') == []
-#    assert pcss('*:contains("link")', ':CONtains("link")') == [
-#        'html', 'nil', 'outer-div', 'tag-anchor', 'nofollow-anchor']
-#    assert pcss('*:contains("LInk")') == []  # case sensitive
-#    assert pcss('*:contains("e")') == [
-#        'html', 'nil', 'outer-div', 'first-ol', 'first-li',
-#        'paragraph', 'p-em']
-#    assert pcss('*:contains("E")') == []  # case-sensitive
     assert pcss('.a', '.b', '*.a', 'ol.a') == ['first-ol']
     assert pcss('.c', '*.c') == ['first-ol', 'third-li', 'fourth-li']
     assert pcss('ol *.c', 'ol li.c', 'li ~ li.c', 'ol > li.c') == [
@@ -130,7 +123,7 @@ def test_select():
     assert pcss('a[href]') == ['tag-anchor', 'nofollow-anchor']
     assert pcss(':not(*)') == []
     assert pcss('a:not([href])') == ['name-anchor']
-    assert pcss('ol :Not(li[class])') == [
+    assert pcss('ol :Not([class])') == [
         'first-li', 'second-li', 'li-div',
         'fifth-li', 'sixth-li', 'seventh-li']
     # Invalid characters in XPath element names, should not crash
