@@ -52,11 +52,14 @@ def translate(selector):
             left = 'any(%s for el in el.iterancestors())' % left
         elif selector.combinator == '>':
             # Empty list for False, non-empty list for True
-            left = ('[1 for el in [el.getparent()] if el is not None and %s]'
-                    % left)
+            # Use list(generetor-expression) rather than [list-comprehension]
+            # to create a new scope for the el variable.
+            # List comprehensions do not create a scope in Python 2.x
+            left = ('list(1 for el in [el.getparent()] '
+                         'if el is not None and %s)' % left)
         elif selector.combinator == '+':
-            left = ('[1 for el in [el.getprevious()] if el is not None and %s]'
-                    % left)
+            left = ('list(1 for el in [el.getprevious()] '
+                         'if el is not None and %s)' % left)
         elif selector.combinator == '~':
             left = 'any(%s for el in el.itersiblings(preceding=True))' % left
         else:
