@@ -21,5 +21,5 @@ setup(
     url='http://packages.python.org/lselect/',
     license='BSD',
     packages=['lselect'],
-    install_requires=['cssselect', 'tinycss', 'lxml']
+    install_requires=['tinycss==0.3', 'lxml']
 )
