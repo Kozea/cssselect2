@@ -103,26 +103,34 @@ def _translate(selector):
     # 1 and 0 are used for True and False to avoid global lookups.
 
     if isinstance(selector, parser.CombinedSelector):
-        left = _translate(selector.left)
-        if left == '0':
-            return left
-        # No shortcut if left == '1', the element matching left needs to exist.
-
-        if selector.combinator == ' ':
-            left = 'any(%s for el in el.iterancestors())' % left
+        left_inside = _translate(selector.left)
+        if left_inside == '0':
+            return '0'  # 0 and x == 0
+        elif left_inside == '1':
+            # 1 and x == x, but the element matching 1 still needs to exist.
+            if selector.combinator in (' ', '>'):
+                left = '(el.getparent() is not None)'
+            elif selector.combinator in ('~', '+'):
+                left = '(el.getprevious() is not None)'
+            else:
+                raise ValueError('Unknown combinator', selector.combinator)
+        # Rebind the `el` name inside a generator-expressions (in a new scope)
+        # so that 'left_inside' applies to different elements.
+        elif selector.combinator == ' ':
+            left = 'any(%s for el in el.iterancestors())' % left_inside
         elif selector.combinator == '>':
             # Empty list for False, non-empty list for True
-            # Use list(generetor-expression) rather than [list-comprehension]
+            # Use list(generator-expression) rather than [list-comprehension]
             # to create a new scope for the el variable.
             # List comprehensions do not create a scope in Python 2.x
             left = ('list(1 for el in [el.getparent()] '
-                         'if el is not None and %s)' % left)
+                         'if el is not None and %s)' % left_inside)
         elif selector.combinator == '+':
             left = ('list(1 for el in [el.getprevious()] '
-                         'if el is not None and %s)' % left)
+                         'if el is not None and %s)' % left_inside)
         elif selector.combinator == '~':
             left = ('any(%s for el in el.itersiblings(preceding=1))'
-                    % left)
+                    % left_inside)
         else:
             raise ValueError('Unknown combinator', selector.combinator)
 
@@ -136,11 +144,17 @@ def _translate(selector):
             return '(%s and %s)' % (right, left)
 
     elif isinstance(selector, parser.CompoundSelector):
-        if len(selector.simple_selectors) == 1:
-            return _translate(selector.simple_selectors[0])
-        assert selector.simple_selectors
-        return '(%s)' % ' and '.join(map(
-            _translate, selector.simple_selectors))
+        sub_expressions = [
+            expr for expr in map(_translate, selector.simple_selectors)
+            if expr != '1']
+        if len(sub_expressions) == 1:
+            return sub_expressions[0]
+        elif '0' in sub_expressions:
+            return '0'
+        elif sub_expressions:
+            return '(%s)' % ' and '.join(sub_expressions)
+        else:
+            return '1'  # all([]) == True
 
     elif isinstance(selector, parser.ElementTypeSelector):
         ns = selector.namespace
