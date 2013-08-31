@@ -7,19 +7,19 @@ from setuptools import setup
 
 ROOT = os.path.dirname(__file__)
 README = open(os.path.join(ROOT, 'README.rst')).read()
-INIT_PY = open(os.path.join(ROOT, 'lselect', '__init__.py')).read()
+INIT_PY = open(os.path.join(ROOT, 'cssselect2', '__init__.py')).read()
 VERSION = re.search("VERSION = '([^']+)'", INIT_PY).group(1)
 
 
 setup(
-    name='lselect',
+    name='cssselect2',
     version=VERSION,
     author='Simon Sapin',
     author_email='simon.sapin@exyr.org',
-    description='CSS selectors for lxml.',
+    description='CSS selectors for ElementTree.',
     long_description=README,
-    url='http://packages.python.org/lselect/',
+    url='http://packages.python.org/cssselect2/',
     license='BSD',
-    packages=['lselect'],
+    packages=['cssselect2'],
     install_requires=['tinycss==0.3', 'lxml']
 )

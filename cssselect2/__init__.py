@@ -1,9 +1,9 @@
 # coding: utf8
 """
-    lselect
-    -------
+    cssselect2
+    ----------
 
-    CSS selectors for lxml.
+    CSS selectors for ElementTree.
 
     :copyright: (c) 2012 by Simon Sapin.
     :license: BSD, see LICENSE for more details.

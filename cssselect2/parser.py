@@ -1,7 +1,7 @@
 # coding: utf8
 """
-    lselect.parser
-    --------------
+    cssselect2.parser
+    -----------------
 
     A parser for CSS selectors, based on the tinycss tokenizer.
 

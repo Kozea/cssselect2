@@ -1,9 +1,9 @@
 # coding: utf8
 """
-    lselect.tests
-    -------------
+    cssselect2.tests
+    ----------------
 
-    Test suite for lselect
+    Test suite for cssselect2.
 
     :copyright: (c) 2012 by Simon Sapin.
     :license: BSD, see LICENSE for more details.
