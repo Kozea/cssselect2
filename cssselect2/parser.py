@@ -12,7 +12,7 @@
 
 import re
 
-from tinycss.parsing import ParseError, strip_whitespace
+from tinycss2.nth import parse_nth
 
 
 __all__ = ['parse']
@@ -24,58 +24,23 @@ def parse(tokens, namespaces=None):
     yield parse_selector(tokens, namespaces)
     while 1:
         next = tokens.next()
-        if next.type == 'EOF':
+        if next is None:
             return
-        elif next.type == ',':
+        elif next == ',':
             yield parse_selector(tokens, namespaces)
         else:
             raise SelectorError(next, 'unpexpected %s token.' % next.type)
-
-
-# ['-'|'+']? INTEGER? {N} [ S* ['-'|'+'] S* INTEGER ]?
-NTH_CHILD_RE = re.compile(
-    r'^([-+]?)(\d+)?{n}({w}[-+]{w}\d+)?$'.format(
-        n=r'(?:n|\\0{0,4}(?:4e|6e)(?:\r\n|[ \t\r\n\f])?|\\n)',
-        w=r'[ \t\r\n\f]*'))
-
-def parse_nth_child(tokens):
-    """Parse the arguments for :nth-child() and friends.
-
-    :param tokens: A list of tokens
-    :returns: ``(a, b)`` or None
-
-    """
-    tokens = strip_whitespace(tokens)
-    if len(tokens) == 1:
-        type_ = tokens[0].type
-        value = tokens[0].value
-        if type_ == 'IDENT':
-            if value == 'odd':
-                return 2, 1
-            if value == 'even':
-                return 2, 0
-        if type_ == 'INTEGER':
-            return 0, value
-
-    match = NTH_CHILD_RE.match(''.join(token.as_css() for token in tokens))
-    if match:
-        a_sign, a, b = match.groups()
-        a = int(a) if a else 1
-        if a_sign == '-':
-            a = -a
-        b = int(b) if b else 0
-        return a, b
 
 
 def parse_lang(tokens):
     """Parse the arguments for :lang().
 
     :param tokens: A list of tokens
-    :returns: ``(a, b)`` or None
+    :returns: A language tag as a string, or None.
 
     """
-    tokens = strip_whitespace(tokens)
-    if len(tokens) == 1 and tokens[0].type == 'IDENT':
+    tokens = [t for t in tokens if t.type != 'whitespace']
+    if len(tokens) == 1 and tokens[0].type == 'ident':
         return tokens[0].value
 
 
@@ -86,10 +51,12 @@ def parse_selector(tokens, namespaces):
         if pseudo_element is not None:
             return Selector(result, pseudo_element)
         peek = tokens.peek()
-        if peek.type in ('>', '+', '~'):
-            combinator = peek.type
+        if peek is None:
+            return Selector(result, pseudo_element)
+        elif peek in ('>', '+', '~'):
+            combinator = peek.value
             tokens.next()
-        elif has_whitespace and peek.type != 'EOF':
+        elif has_whitespace:
             combinator = ' '
         else:
             return Selector(result, pseudo_element)
@@ -102,74 +69,43 @@ def parse_compound_selector(tokens, namespaces):
     pseudo_element = None
 
     tokens.skip_whitespace()
-    peek3 = tokens.peek_types(3)
-    peek2 = peek3[:2]
-    peek1 = peek3[0]
-    if peek3 == ('IDENT', '|', 'IDENT'):
-        namespace = get_namespace(tokens.next(), namespaces)
-        tokens.next()
-        element_type = tokens.next().value
-        simple_selectors.append(ElementTypeSelector(namespace, element_type))
-    elif peek3 == ('IDENT', '|', '*'):
-        namespace = get_namespace(tokens.next(), namespaces)
-        tokens.next()
-        tokens.next()
-        simple_selectors.append(UniversalSelector(namespace))
-    elif peek1 == 'IDENT':
-        namespace = namespaces.get(None, any)  # default namespace
-        element_type = tokens.next().value
-        simple_selectors.append(ElementTypeSelector(namespace, element_type))
-    elif peek3 == ('*', '|', 'IDENT'):
-        tokens.next()
-        tokens.next()
-        element_type = tokens.next().value
-        simple_selectors.append(ElementTypeSelector(any, element_type))
-    elif peek3 == ('*', '|', '*'):
-        tokens.next()
-        tokens.next()
-        tokens.next()
-        simple_selectors.append(UniversalSelector(any))
-    elif peek1 == '*':
-        namespace = namespaces.get(None, any)  # default namespace
-        tokens.next()
-        simple_selectors.append(UniversalSelector(namespace))
-    elif peek2 == ('|', 'IDENT'):
-        tokens.next()
-        element_type = tokens.next().value
-        simple_selectors.append(ElementTypeSelector(None, element_type))
-    elif peek2 == ('|', '*'):
-        tokens.next()
-        tokens.next()
-        simple_selectors.append(UniversalSelector(None))
+    qualified_name = parse_qualified_name(tokens, namespaces)
+    if qualified_name is not None:
+        namespace, local_name = qualified_name
+        if local_name is not None:
+            simple_selectors.append(ElementTypeSelector(namespace, local_name))
+        else:
+            simple_selectors.append(UniversalSelector(namespace))
 
     while 1:
         peek = tokens.peek()
-        if peek.type == 'HASH':
+        if peek is None:
+            break
+        if peek.type == 'hash' and peek.is_identifier:
             tokens.next()
-            # [1:] removes the #
-            simple_selectors.append(IDSelector(peek.value[1:]))
-        elif peek.type == '.':
+            simple_selectors.append(IDSelector(peek.value))
+        elif peek == '.':
             tokens.next()
             simple_selectors.append(ClassSelector(get_ident(tokens.next())))
-        elif peek.type == '[':
+        elif peek.type == '[] block':
             tokens.next()
             simple_selectors.append(parse_attribute_selector(
                 TokenStream(peek.content), namespaces))
-        elif peek.type == ':':
+        elif peek == ':':
             tokens.next()
             next = tokens.next()
-            if next.type == ':':
+            if next == ':':
                 pseudo_element = get_ident(tokens.next())
                 break
-            elif next.type == 'IDENT':
+            elif next.type == 'ident':
                 name = ascii_lower(next.value)
                 if name in ('before', 'after', 'first-line', 'first-letter'):
                     pseudo_element = name
                     break
                 else:
                     simple_selectors.append(PseudoClassSelector(name))
-            elif next.type == 'FUNCTION':
-                name = ascii_lower(next.function_name)
+            elif next.type == 'function':
+                name = next.lower_name
                 if name == 'not':
                     simple_selectors.append(parse_negation(next, namespaces))
                 else:
@@ -183,16 +119,16 @@ def parse_compound_selector(tokens, namespaces):
     if simple_selectors:
         return CompoundSelector(simple_selectors), pseudo_element
     else:
-        raise SelectorError(
-            peek, 'expected a compound selector, got %s' % peek.type)
+        raise SelectorError(peek, 'expected a compound selector, got %s'
+                            % (peek.type if peek else 'EOF'))
 
 
 def parse_negation(negation_token, namespaces):
-    tokens = TokenStream(negation_token.content)
+    tokens = TokenStream(negation_token.arguments)
     compound, pseudo_element = parse_compound_selector(tokens, namespaces)
     tokens.skip_whitespace()
     if (pseudo_element is None and len(compound.simple_selectors) == 1
-            and tokens.next().type == 'EOF'):
+            and tokens.next() is None):
         return NegationSelector(compound.simple_selectors[0])
     else:
         raise SelectorError(
@@ -201,69 +137,81 @@ def parse_negation(negation_token, namespaces):
 
 def parse_attribute_selector(tokens, namespaces):
     tokens.skip_whitespace()
-    peek3 = tokens.peek_types(3)
-    peek2 = peek3[:2]
-    peek1 = peek3[0]
-    if peek3 == ('IDENT', '|', 'IDENT'):
-        namespace = get_namespace(tokens.next(), namespaces)
-        tokens.next()
-        name = tokens.next().value
-    elif peek1 == 'IDENT':
-        # The default namespace do not apply to attributes:
-        # http://www.w3.org/TR/selectors/#attrnmsp
-        namespace = None
-        name = tokens.next().value
-    elif peek3 == ('*', '|', 'IDENT'):
-        namespace = any
-        tokens.next()
-        tokens.next()
-        name = tokens.next().value
-    elif peek2 == ('|', 'IDENT'):
-        namespace = None
-        tokens.next()
-        name = tokens.next().value
-    else:
+    qualified_name = parse_qualified_name(tokens, namespaces, is_attribute=True)
+    if qualified_name is None:
         next = tokens.next()
         raise SelectorError(
             next, 'expected attribute name, got %s' % next.type)
+    namespace, local_name = qualified_name
 
     tokens.skip_whitespace()
-    if tokens.peek().type == '=':
-        operator = '='
+    peek = tokens.peek()
+    if peek is None:
+        operator = None
+        value = None
+    elif peek in ('=', '~=', '|=', '^=', '$=', '*='):
+        operator = peek.value
         tokens.next()
-    else:
-        operator = ''.join(tokens.peek_types(2))
-        if operator in ('~=', '|=', '^=', '$=', '*='):
-            tokens.next()
-            tokens.next()
-        else:
-            operator = value = None
-
-    if operator is not None:
         tokens.skip_whitespace()
         next = tokens.next()
-        if next.type not in ('IDENT', 'STRING'):
+        if next.type not in ('ident', 'string'):
             raise SelectorError(
                 next, 'expected attribute value, got %s' % next.type)
         value = next.value
+    else:
+        raise SelectorError(
+            next, 'expected attribute selector operator, got %s' % next.type)
 
     tokens.skip_whitespace()
-    next = tokens.next().type
-    if next != 'EOF':
-        raise SelectorError(next, 'expected ], got %s' % next)
-    return AttributeSelector(namespace, name, operator, value)
+    next = tokens.next()
+    if next is not None:
+        raise SelectorError(next, 'expected ], got %s' % next.type)
+    return AttributeSelector(namespace, local_name, operator, value)
 
 
-def get_namespace(token, namespaces):
-    assert token.type == 'IDENT'
-    prefix = token.value
-    if prefix not in namespaces:
-        raise SelectorError(token, 'undefined namespace prefix: ' + prefix)
-    return namespaces[prefix]
+def parse_qualified_name(tokens, namespaces, is_attribute=False):
+    """Returns None (not a qualified name) or (ns, local),
+    in which None is a wildcard. The empty string for ns is "no namespace".
+
+    """
+    peek = tokens.peek()
+    if peek.type == 'ident':
+        first_ident = tokens.next()
+        peek = tokens.peek()
+        if peek != '|':
+            namespace = '' if is_attribute else namespaces.get(None, None)
+            return namespace, first_ident.value
+        tokens.next()
+        namespace = namespaces.get(first_ident.value)
+        if namespace is None:
+            raise SelectorError(
+                token, 'undefined namespace prefix: ' + first_ident.value)
+    elif peek == '*':
+        tokens.next()
+        peek = tokens.peek()
+        if peek != '|':
+            namespace = '' if is_attribute else namespaces.get(None, None)
+            return namespace, None
+        tokens.next()
+        namespace = None
+    elif peek == '|':
+        tokens.next()
+        namespace = ''
+    else:
+        return None
+
+    # If we get here, we just consumed '|' and set ``namespace``
+    next = tokens.next()
+    if next.type == 'ident':
+        return namespace, next.value
+    elif next == '*' and not is_attribute:
+        return namespace, None
+    else:
+        raise SelectorError(next, 'Expected local name, got %s' % next.type)
 
 
 def get_ident(token):
-    if token.type != 'IDENT':
+    if token.type != 'ident':
         raise SelectorError(token, 'Expected IDENT, got %s' % token.type)
     return token.value
 
@@ -273,45 +221,32 @@ def ascii_lower(string):
     return string.encode('utf8').lower().decode('utf8')
 
 
-class SelectorError(ParseError):
-    """A specialized ParseError from tinycss for selectors."""
-
-
-class EOFToken(object):
-    type = 'EOF'
-    value = None
+class SelectorError(ValueError):
+    """A specialized ValueError for invalid selectors."""
 
 
 class TokenStream(object):
     def __init__(self, tokens):
         self.tokens = iter(tokens)
-        self.peeked = []
-
-    def _next(self):
-        token = next(self.tokens, EOFToken)
-        if token.type == 'DELIM':
-            token.type = token.value
-        return token
+        self.peeked = []  # In reversed order
 
     def next(self):
         if self.peeked:
             return self.peeked.pop()
         else:
-            return self._next()
-
-    def peek_types(self, n):
-        while len(self.peeked) < n:
-            self.peeked.insert(0, self._next())
-        return tuple(t.type for t in self.peeked[-n:][::-1])
+            return next(self.tokens, None)
 
     def peek(self):
         if not self.peeked:
-            self.peeked.append(self._next())
+            self.peeked.append(next(self.tokens, None))
         return self.peeked[-1]
 
     def skip_whitespace(self):
         has_whitespace = False
-        while self.peek().type == 'S':
+        while 1:
+            peek = self.peek()
+            if peek is None or peek.type != 'whitespace':
+                break
             self.next()
             has_whitespace = True
         return has_whitespace
@@ -402,9 +337,9 @@ class UniversalSelector(object):
         self.namespace = namespace
 
     def __repr__(self):
-        if self.namespace is None:
+        if self.namespace == '':
             return '|*'
-        elif self.namespace is any:
+        elif self.namespace is None:
             return '*|*'
         else:
             return '{%s}|*' % self.namespace
@@ -443,8 +378,8 @@ class AttributeSelector(object):
         self.value = value
 
     def __repr__(self):
-        namespace = '|' if self.namespace is None else (
-            '*|' if self.namespace is any else '{%s}' % self.namespace)
+        namespace = ('*|' if self.namespace is None
+                     else '{%s}' % self.namespace)
         return '[%s%s%s%r]' % (namespace, self.name, self.operator, self.value)
 
 
@@ -466,10 +401,10 @@ class FunctionalPseudoClassSelector(object):
         self.function_token = function_token
 
     def __repr__(self):
-        return ':%s%r' % (self.name, tuple(self.function_token.content))
+        return ':%s%r' % (self.name, tuple(self.function_token.arguments))
 
     def parse(self, parse_function):
-        result = parse_function(self.function_token.content)
+        result = parse_function(self.function_token.arguments)
         if result is None:
             raise SelectorError(self.function_token,
                                 'invalid arguments for :%s()' % self.name)
@@ -479,7 +414,7 @@ class FunctionalPseudoClassSelector(object):
         return self.parse(parse_lang)
 
     def parse_nth_child(self):
-        return self.parse(parse_nth_child)
+        return self.parse(parse_nth)
 
 
 class NegationSelector(object):

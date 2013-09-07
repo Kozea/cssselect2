@@ -1,5 +1,5 @@
-cssselect2: CSS selectors for ElementTree
-=========================================
+cssselect2: CSS selectors for Python ElementTree
+================================================
 
 cssselect2 is a straightforward implementation of `CSS3 Selectors`_ for
 `ElementTree`_-compatible documents (including cElementTree, lxml_, etc.)

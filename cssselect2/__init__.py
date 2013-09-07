@@ -10,7 +10,7 @@
 
 """
 
-from tinycss.tokenizer import tokenize_grouped
+from tinycss2 import parse_component_value_list
 
 from . import parser
 
@@ -35,12 +35,13 @@ def compile_string(string, namespaces=None):
     """
     if isinstance(string, bytes):
         string = string.decode('ascii')
-    return compile_tokens(tokenize_grouped(string), namespaces)
+    return compile_component_values(
+        parse_component_value_list(string), namespaces)
 
 
-def compile_tokens(tokens, namespaces=None):
-    """Same as :func:`compile_string`, but the input is a list of tinycss
-    "grouped" tokens rather than a string.
+def compile_component_values(tokens, namespaces=None):
+    """Same as :func:`compile_string`, but the input is a list of tinycss2
+    component values rather than a string.
 
     """
     return [(selector, eval('lambda el: ' + _translate(selector.parsed_tree),
@@ -161,17 +162,17 @@ def _translate(selector):
         local_name = selector.element_type
         # In lxml, Element.tag is a string with the format '{ns}local_name'
         # or just 'local_name' for the empty namespace.
-        if ns is any:
+        if ns is None:
             return '(el.tag.rsplit("}", 1)[-1] == %r)' % local_name
         else:
-            tag = local_name if ns is None else '{%s}%s' % (ns, local_name)
+            tag = local_name if ns != '' else '{%s}%s' % (ns, local_name)
             return '(el.tag == %r)' % tag
 
     elif isinstance(selector, parser.UniversalSelector):
         ns = selector.namespace
-        if ns is any:
+        if ns is None:
             return '1'
-        elif ns is None:
+        elif ns == '':
             return '(el.tag[0] != "{")'
         else:
             return 'el.tag.startswith(%r)' % ('{%s}' % ns)
@@ -180,16 +181,16 @@ def _translate(selector):
         assert selector.class_name  # syntax does not allow empty identifiers
         name = 'class'  # TODO: make this configurable.
         return _translate(parser.AttributeSelector(
-            None, name, '~=', selector.class_name))
+            '', name, '~=', selector.class_name))
 
     elif isinstance(selector, parser.IDSelector):
         assert selector.ident  # syntax does not allow empty identifiers
         name = 'id'  # TODO: make this configurable.
         return _translate(parser.AttributeSelector(
-            None, name, '=', selector.ident))
+            '', name, '=', selector.ident))
 
     elif isinstance(selector, parser.AttributeSelector):
-        assert selector.namespace is None  # TODO handle namespaced attributes
+        assert selector.namespace == ''  # TODO handle namespaced attributes
         name = selector.name
         value = selector.value
         if selector.operator is None:
@@ -263,9 +264,9 @@ def _translate(selector):
             lang = selector.parse_lang()
             name = 'lang'  # TODO: make this configurable.
             # TODO: matching should be case-insensitive
-            lang = parser.AttributeSelector(None, name, '|=', lang)
+            lang = parser.AttributeSelector('', name, '|=', lang)
             ancestor = parser.CombinedSelector(
-                lang, ' ', parser.UniversalSelector(any))
+                lang, ' ', parser.UniversalSelector(None))
             return '(%s or %s)' % (_translate(lang), _translate(ancestor))
         else:
             a, b = selector.parse_nth_child()

@@ -16,10 +16,10 @@ setup(
     version=VERSION,
     author='Simon Sapin',
     author_email='simon.sapin@exyr.org',
-    description='CSS selectors for ElementTree.',
+    description='CSS selectors for Python ElementTree',
     long_description=README,
     url='http://packages.python.org/cssselect2/',
     license='BSD',
     packages=['cssselect2'],
-    install_requires=['tinycss==0.3', 'lxml']
+    install_requires=['tinycss2', 'lxml']
 )
