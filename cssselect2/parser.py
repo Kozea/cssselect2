@@ -12,8 +12,6 @@
 
 import re
 
-from tinycss2.nth import parse_nth
-
 
 __all__ = ['parse']
 
@@ -30,18 +28,6 @@ def parse(tokens, namespaces=None):
             yield parse_selector(tokens, namespaces)
         else:
             raise SelectorError(next, 'unpexpected %s token.' % next.type)
-
-
-def parse_lang(tokens):
-    """Parse the arguments for :lang().
-
-    :param tokens: A list of tokens
-    :returns: A language tag as a string, or None.
-
-    """
-    tokens = [t for t in tokens if t.type != 'whitespace']
-    if len(tokens) == 1 and tokens[0].type == 'ident':
-        return tokens[0].value
 
 
 def parse_selector(tokens, namespaces):
@@ -402,19 +388,6 @@ class FunctionalPseudoClassSelector(object):
 
     def __repr__(self):
         return ':%s%r' % (self.name, tuple(self.function_token.arguments))
-
-    def parse(self, parse_function):
-        result = parse_function(self.function_token.arguments)
-        if result is None:
-            raise SelectorError(self.function_token,
-                                'invalid arguments for :%s()' % self.name)
-        return result
-
-    def parse_lang(self):
-        return self.parse(parse_lang)
-
-    def parse_nth_child(self):
-        return self.parse(parse_nth)
 
 
 class NegationSelector(object):

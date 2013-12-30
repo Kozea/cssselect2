@@ -11,6 +11,7 @@
 """
 
 from tinycss2 import parse_component_value_list
+from tinycss2.nth import parse_nth
 
 from . import parser
 
@@ -261,7 +262,15 @@ def _translate(selector):
 
     elif isinstance(selector, parser.FunctionalPseudoClassSelector):
         if selector.name == 'lang':
-            lang = selector.parse_lang()
+            tokens = [
+                t for t in selector.function_token.arguments
+                if t.type != 'whitespace'
+            ]
+            if len(tokens) == 1 and tokens[0].type == 'ident':
+                lang = tokens[0].value
+            else:
+                raise ValueError('Invalid arguments for :lang()')
+
             name = 'lang'  # TODO: make this configurable.
             # TODO: matching should be case-insensitive
             lang = parser.AttributeSelector('', name, '|=', lang)
@@ -269,7 +278,10 @@ def _translate(selector):
                 lang, ' ', parser.UniversalSelector(None))
             return '(%s or %s)' % (_translate(lang), _translate(ancestor))
         else:
-            a, b = selector.parse_nth_child()
+            result = parse_nth(selector.function_token.arguments)
+            if result is None:
+                raise ValueError('Invalid arguments for :%s()' % selector.name)
+            a, b = result
             # x is the number of siblings before/after the element
             # Matches if a positive or zero integer n exists so that:
             # x = a*n + b-1
