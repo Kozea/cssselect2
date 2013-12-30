@@ -150,26 +150,31 @@ def _translate(selector):
             expr for expr in map(_translate, selector.simple_selectors)
             if expr != '1']
         if len(sub_expressions) == 1:
-            return sub_expressions[0]
+            test = sub_expressions[0]
         elif '0' in sub_expressions:
-            return '0'
+            test = '0'
         elif sub_expressions:
-            return '(%s)' % ' and '.join(sub_expressions)
+            test = '(%s)' % ' and '.join(sub_expressions)
         else:
-            return '1'  # all([]) == True
+            test = '1'  # all([]) == True
 
-    elif isinstance(selector, parser.ElementTypeSelector):
-        ns = selector.namespace
-        local_name = selector.element_type
+        if isinstance(selector, parser.NegationSelector):
+            if test == '0':
+                return '1'
+            elif test == '1':
+                return '0'
+            else:
+                return '(not %s)' % test
+        else:
+            return test
+
+    elif isinstance(selector, parser.LocalNameSelector):
+        local_name = selector.local_name
         # In lxml, Element.tag is a string with the format '{ns}local_name'
         # or just 'local_name' for the empty namespace.
-        if ns is None:
-            return '(el.tag.rsplit("}", 1)[-1] == %r)' % local_name
-        else:
-            tag = local_name if ns != '' else '{%s}%s' % (ns, local_name)
-            return '(el.tag == %r)' % tag
+        return '(el.tag.rsplit("}", 1)[-1] == %r)' % selector.local_name
 
-    elif isinstance(selector, parser.UniversalSelector):
+    elif isinstance(selector, parser.NamespaceSelector):
         ns = selector.namespace
         if ns is None:
             return '1'
@@ -263,7 +268,7 @@ def _translate(selector):
     elif isinstance(selector, parser.FunctionalPseudoClassSelector):
         if selector.name == 'lang':
             tokens = [
-                t for t in selector.function_token.arguments
+                t for t in selector.arguments
                 if t.type != 'whitespace'
             ]
             if len(tokens) == 1 and tokens[0].type == 'ident':
@@ -275,10 +280,10 @@ def _translate(selector):
             # TODO: matching should be case-insensitive
             lang = parser.AttributeSelector('', name, '|=', lang)
             ancestor = parser.CombinedSelector(
-                lang, ' ', parser.UniversalSelector(None))
+                lang, ' ', parser.CompoundSelector([]))
             return '(%s or %s)' % (_translate(lang), _translate(ancestor))
         else:
-            result = parse_nth(selector.function_token.arguments)
+            result = parse_nth(selector.arguments)
             if result is None:
                 raise ValueError('Invalid arguments for :%s()' % selector.name)
             a, b = result
@@ -306,15 +311,6 @@ def _translate(selector):
                 return test % 'el.itersiblings(el.tag)'
             else:
                 raise ValueError('Unknown pseudo-class', selector.name)
-
-    elif isinstance(selector, parser.NegationSelector):
-        test = _translate(selector.sub_selector)
-        if test == '0':
-            return '1'
-        elif test == '1':
-            return '0'
-        else:
-            return '(not %s)' % test
 
     else:
         raise TypeError(type(selector), selector)

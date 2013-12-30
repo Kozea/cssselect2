@@ -51,71 +51,87 @@ def parse_selector(tokens, namespaces):
 
 
 def parse_compound_selector(tokens, namespaces):
-    simple_selectors = []
-    pseudo_element = None
-
-    tokens.skip_whitespace()
-    qualified_name = parse_qualified_name(tokens, namespaces)
-    if qualified_name is not None:
-        namespace, local_name = qualified_name
-        if local_name is not None:
-            simple_selectors.append(ElementTypeSelector(namespace, local_name))
-        else:
-            simple_selectors.append(UniversalSelector(namespace))
-
+    type_selectors = parse_type_selector(tokens, namespaces)
+    simple_selectors = type_selectors if type_selectors is not None else []
     while 1:
-        peek = tokens.peek()
-        if peek is None:
+        simple_selector, pseudo_element = parse_simple_selector(
+            tokens, namespaces)
+        if pseudo_element is not None or simple_selector is None:
             break
-        if peek.type == 'hash' and peek.is_identifier:
-            tokens.next()
-            simple_selectors.append(IDSelector(peek.value))
-        elif peek == '.':
-            tokens.next()
-            simple_selectors.append(ClassSelector(get_ident(tokens.next())))
-        elif peek.type == '[] block':
-            tokens.next()
-            simple_selectors.append(parse_attribute_selector(
-                TokenStream(peek.content), namespaces))
-        elif peek == ':':
-            tokens.next()
-            next = tokens.next()
-            if next == ':':
-                pseudo_element = get_ident(tokens.next())
-                break
-            elif next.type == 'ident':
-                name = ascii_lower(next.value)
-                if name in ('before', 'after', 'first-line', 'first-letter'):
-                    pseudo_element = name
-                    break
-                else:
-                    simple_selectors.append(PseudoClassSelector(name))
-            elif next.type == 'function':
-                name = next.lower_name
-                if name == 'not':
-                    simple_selectors.append(parse_negation(next, namespaces))
-                else:
-                    simple_selectors.append(FunctionalPseudoClassSelector(
-                        name, next))
-            else:
-                raise SelectorError(next, 'unexpected %s token.' % next.type)
-        else:
-            break
+        simple_selectors.append(simple_selector)
 
-    if simple_selectors:
+    if simple_selectors or type_selectors is not None:
         return CompoundSelector(simple_selectors), pseudo_element
     else:
         raise SelectorError(peek, 'expected a compound selector, got %s'
                             % (peek.type if peek else 'EOF'))
 
 
+def parse_type_selector(tokens, namespaces):
+    tokens.skip_whitespace()
+    qualified_name = parse_qualified_name(tokens, namespaces)
+    if qualified_name is None:
+        return None
+
+    simple_selectors = []
+    namespace, local_name = qualified_name
+    if local_name is not None:
+        simple_selectors.append(LocalNameSelector(local_name))
+    if namespace is not None:
+        simple_selectors.append(NamespaceSelector(namespace))
+    return simple_selectors
+
+
+def parse_simple_selector(tokens, namespaces, in_negation=False):
+    peek = tokens.peek()
+    if peek is None:
+        return None, None
+    if peek.type == 'hash' and peek.is_identifier:
+        tokens.next()
+        return IDSelector(peek.value), None
+    elif peek == '.':
+        tokens.next()
+        return ClassSelector(get_ident(tokens.next())), None
+    elif peek.type == '[] block':
+        tokens.next()
+        attr = parse_attribute_selector(TokenStream(peek.content), namespaces)
+        return attr, None
+    elif peek == ':':
+        tokens.next()
+        next = tokens.next()
+        if next == ':':
+            return None, get_ident(tokens.next())
+        elif next.type == 'ident':
+            name = ascii_lower(next.value)
+            if name in ('before', 'after', 'first-line', 'first-letter'):
+                return None, name
+            else:
+                return PseudoClassSelector(name), None
+        elif next.type == 'function':
+            name = next.lower_name
+            if name == 'not':
+                if in_negation:
+                    raise SelectorError(next, 'nested :not()')
+                return parse_negation(next, namespaces), None
+            else:
+                return FunctionalPseudoClassSelector(name, next.arguments), None
+        else:
+            raise SelectorError(next, 'unexpected %s token.' % next.type)
+    else:
+        return None, None
+
+
 def parse_negation(negation_token, namespaces):
     tokens = TokenStream(negation_token.arguments)
-    compound, pseudo_element = parse_compound_selector(tokens, namespaces)
+    type_selectors = parse_type_selector(tokens, namespaces)
+    if type_selectors is not None:
+        return NegationSelector(type_selectors)
+
+    simple_selector, pseudo_element = parse_simple_selector(
+        tokens, namespaces, in_negation=True)
     tokens.skip_whitespace()
-    if (pseudo_element is None and len(compound.simple_selectors) == 1
-            and tokens.next() is None):
-        return NegationSelector(compound.simple_selectors[0])
+    if pseudo_element is None and tokens.next() is None:
+        return NegationSelector([simple_selector])
     else:
         raise SelectorError(
             negation_token, ':not() only accepts a simple selector')
@@ -161,6 +177,8 @@ def parse_qualified_name(tokens, namespaces, is_attribute=False):
 
     """
     peek = tokens.peek()
+    if peek is None:
+        return None
     if peek.type == 'ident':
         first_ident = tokens.next()
         peek = tokens.peek()
@@ -284,51 +302,41 @@ class CompoundSelector(object):
 
     @property
     def specificity(self):
-        # zip(*foo) turns [(a1, b1, c1), (a2, b2, c2), ...]
-        # into [(a1, a2, ...), (b1, b2, ...), (c1, c2, ...)]
-        return tuple(map(sum, zip(*
-            (sel.specificity for sel in self.simple_selectors))))
+        if self.simple_selectors:
+            # zip(*foo) turns [(a1, b1, c1), (a2, b2, c2), ...]
+            # into [(a1, a2, ...), (b1, b2, ...), (c1, c2, ...)]
+            return tuple(map(sum, zip(*
+                (sel.specificity for sel in self.simple_selectors))))
+        else:
+            return 0, 0, 0
 
     def __repr__(self):
         return ''.join(map(repr, self.simple_selectors))
 
 
-class ElementTypeSelector(object):
+class LocalNameSelector(object):
     specificity =  0, 0, 1
 
-    def __init__(self, namespace, element_type):
-        #: Either ``None`` for no namespace, the built-in function
-        #: ``any`` (used as a marker) for any namespace (``*`` in CSS)
-        #: or a namespace name/URI (not a prefix) as a string.
-        #:
-        #: Note that simple type selectors like ``E`` are resolved to either
-        #: ``NS|E`` or ``*|E``: http://www.w3.org/TR/selectors/#typenmsp
-        self.namespace = namespace
-        self.element_type = element_type
+    def __init__(self, local_name):
+        self.local_name = local_name
 
     def __repr__(self):
-        if self.namespace is None:
-            return '|' + self.element_type
-        elif self.namespace is any:
-            return '*|' + self.element_type
-        else:
-            return '{%s}|%s' % (self.namespace, self.element_type)
+        return local_name
 
 
-class UniversalSelector(object):
+class NamespaceSelector(object):
     specificity =  0, 0, 0
 
     def __init__(self, namespace):
-        #: Same as :attr:`ElementTypeSelector.namespace`
+        #: The namespace URL as a string,
+        #: or the empty string for elements not in any namespace.
         self.namespace = namespace
 
     def __repr__(self):
         if self.namespace == '':
-            return '|*'
-        elif self.namespace is None:
-            return '*|*'
+            return '|'
         else:
-            return '{%s}|*' % self.namespace
+            return '{%s}|' % self.namespace
 
 
 class IDSelector(object):
@@ -382,21 +390,14 @@ class PseudoClassSelector(object):
 class FunctionalPseudoClassSelector(object):
     specificity =  0, 1, 0
 
-    def __init__(self, name, function_token):
+    def __init__(self, name, arguments):
         self.name = name
-        self.function_token = function_token
+        self.arguments = arguments
 
     def __repr__(self):
-        return ':%s%r' % (self.name, tuple(self.function_token.arguments))
+        return ':%s%r' % (self.name, tuple(self.arguments))
 
 
-class NegationSelector(object):
-    def __init__(self, sub_selector):
-        self.sub_selector = sub_selector
-
-    @property
-    def specificity(self):
-        return self.sub_selector.specificity
-
+class NegationSelector(CompoundSelector):
     def __repr__(self):
-        return ':not(%r)' % self.sub_selector
+        return ':not(%r)' % CompoundSelector.__repr__(self)
