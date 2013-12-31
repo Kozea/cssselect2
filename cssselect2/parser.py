@@ -16,14 +16,10 @@ import re
 
 from tinycss2 import parse_component_value_list
 
+from ._compat import basestring
+
 
 __all__ = ['parse']
-
-
-try:
-    basestring = basestring
-except NameError:
-    basestring = str
 
 
 def parse(input, namespaces=None):
@@ -207,11 +203,13 @@ def parse_qualified_name(tokens, namespaces, is_attribute=False):
             raise SelectorError(
                 token, 'undefined namespace prefix: ' + first_ident.value)
     elif peek == '*':
-        tokens.next()
+        next = tokens.next()
         peek = tokens.peek()
         if peek != '|':
-            namespace = '' if is_attribute else namespaces.get(None, None)
-            return namespace, None
+            if is_attribute:
+                raise SelectorError(
+                    next, 'Expected local name, got %s' % next.type)
+            return namespaces.get(None, None), None
         tokens.next()
         namespace = None
     elif peek == '|':
@@ -379,7 +377,6 @@ class AttributeSelector(object):
     specificity =  0, 1, 0
 
     def __init__(self, namespace, name, operator, value):
-        #: Same as :attr:`ElementTypeSelector.namespace`
         self.namespace = namespace
         self.name = name
         #: A string like ``=`` or ``~=``, or None for ``[attr]`` selectors

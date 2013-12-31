@@ -15,6 +15,7 @@ from __future__ import unicode_literals
 from tinycss2.nth import parse_nth
 
 from . import parser
+from .tree import Element, split_whitespace
 
 
 VERSION = '0.1a0'
@@ -41,7 +42,7 @@ def compile(input, namespaces=None):
 
     """
     return [(selector, eval('lambda el: ' + _translate(selector.parsed_tree),
-                            {}, {}))
+                            {'split_whitespace': split_whitespace}))
             for selector in parser.parse(input, namespaces)]
 
 
@@ -64,12 +65,21 @@ def match(tree, selectors):
     selectors = [(selector, test, data)
                  for selector_list, data in selectors
                  for selector, test in selector_list]
-    for element in tree.iter():
+    if hasattr(tree, 'getroot'):
+        tree = tree.getroot()
+    stack = [iter([Element(tree)])]
+    while stack:
+        element = next(stack[-1], None)
+        if element is None:
+            stack.pop()
+            continue
+
         for selector, test, data in selectors:
             if test(element):
-                yield (element, selector.pseudo_element,
+                yield (element.etree_element, selector.pseudo_element,
                        selector.specificity, data)
 
+        stack.append(element.iter_children())
 
 def match_simple(tree, *selectors):
     """Match selectors against a document.
@@ -107,27 +117,27 @@ def _translate(selector):
         elif left_inside == '1':
             # 1 and x == x, but the element matching 1 still needs to exist.
             if selector.combinator in (' ', '>'):
-                left = '(el.getparent() is not None)'
+                left = '(el.parent is not None)'
             elif selector.combinator in ('~', '+'):
-                left = '(el.getprevious() is not None)'
+                left = '(el.previous is not None)'
             else:
                 raise ValueError('Unknown combinator', selector.combinator)
         # Rebind the `el` name inside a generator-expressions (in a new scope)
         # so that 'left_inside' applies to different elements.
         elif selector.combinator == ' ':
-            left = 'any(%s for el in el.iterancestors())' % left_inside
+            left = 'any(%s for el in el.iter_ancestors())' % left_inside
         elif selector.combinator == '>':
             # Empty list for False, non-empty list for True
             # Use list(generator-expression) rather than [list-comprehension]
             # to create a new scope for the el variable.
             # List comprehensions do not create a scope in Python 2.x
-            left = ('list(1 for el in [el.getparent()] '
+            left = ('list(1 for el in [el.parent] '
                          'if el is not None and %s)' % left_inside)
         elif selector.combinator == '+':
-            left = ('list(1 for el in [el.getprevious()] '
+            left = ('list(1 for el in [el.previous] '
                          'if el is not None and %s)' % left_inside)
         elif selector.combinator == '~':
-            left = ('any(%s for el in el.itersiblings(preceding=1))'
+            left = ('any(%s for el in el.iter_previous_siblings())'
                     % left_inside)
         else:
             raise ValueError('Unknown combinator', selector.combinator)
@@ -165,68 +175,58 @@ def _translate(selector):
             return test
 
     elif isinstance(selector, parser.LocalNameSelector):
-        local_name = selector.local_name
         # In lxml, Element.tag is a string with the format '{ns}local_name'
         # or just 'local_name' for the empty namespace.
-        return '(el.tag.rsplit("}", 1)[-1] == %r)' % selector.local_name
+        return '(el.local_name == %r)' % selector.local_name
 
     elif isinstance(selector, parser.NamespaceSelector):
-        ns = selector.namespace
-        if ns is None:
-            return '1'
-        elif ns == '':
-            return '(el.tag[0] != "{")'
-        else:
-            return 'el.tag.startswith(%r)' % ('{%s}' % ns)
+        return '(el.namespace_url == %r)' % selector.namespace
 
     elif isinstance(selector, parser.ClassSelector):
-        assert selector.class_name  # syntax does not allow empty identifiers
-        name = 'class'  # TODO: make this configurable.
-        return _translate(parser.AttributeSelector(
-            '', name, '~=', selector.class_name))
+        return '(%r in el.classes)' % selector.class_name
 
     elif isinstance(selector, parser.IDSelector):
-        assert selector.ident  # syntax does not allow empty identifiers
-        name = 'id'  # TODO: make this configurable.
-        return _translate(parser.AttributeSelector(
-            '', name, '=', selector.ident))
+        return '(el.id == %r)' % selector.ident
 
     elif isinstance(selector, parser.AttributeSelector):
-        assert selector.namespace == ''  # TODO handle namespaced attributes
-        name = selector.name
-        value = selector.value
-        if selector.operator is None:
-            return '(el.get(%r) is not None)' % name
-        elif selector.operator == '=':
-            return '(el.get(%r) == %r)' % (name, value)
-        elif selector.operator == '~=':
-            if len(value.split()) != 1 or value.strip() != value:
-                return '0'
+        if selector.namespace is not None:
+            key = '{%s}%s' % (selector.namespace, selector.name)
+            value = selector.value
+            if selector.operator is None:
+                return '(el.get_attr(%r) is not None)' % key
+            elif selector.operator == '=':
+                return '(el.get_attr(%r) == %r)' % (key, value)
+            elif selector.operator == '~=':
+                if len(value.split()) != 1 or value.strip() != value:
+                    return '0'
+                else:
+                    return ('(%r in split_whitespace(el.get_attr(%r, "")))'
+                            % (value, key))
+            elif selector.operator == '|=':
+                # Empty list for False, non-empty list for True
+                return ('[1 for value in [el.get_attr(%r)] if value == %r or'
+                        ' (value is not None and value.startswith(%r))]'
+                        % (key, value, value + '-'))
+            elif selector.operator == '^=':
+                if value:
+                    return 'el.get_attr(%r, "").startswith(%r)' % (key, value)
+                else:
+                    return '0'
+            elif selector.operator == '$=':
+                if value:
+                    return 'el.get_attr(%r, "").endswith(%r)' % (key, value)
+                else:
+                    return '0'
+            elif selector.operator == '*=':
+                if value:
+                    return '(%r in el.get_attr(%r, ""))' % (value, key)
+                else:
+                    return '0'
             else:
-                # TODO: only split on ASCII whitespace
-                return '(%r in el.get(%r, "").split())' % (value, name)
-        elif selector.operator == '|=':
-            # Empty list for False, non-empty list for True
-            return ('[1 for value in [el.get(%r)] if value == %r or'
-                    ' (value is not None and value.startswith(%r))]'
-                    % (name, value, value + '-'))
-        elif selector.operator == '^=':
-            if value:
-                return 'el.get(%r, "").startswith(%r)' % (name, value)
-            else:
-                return '0'
-        elif selector.operator == '$=':
-            if value:
-                return 'el.get(%r, "").endswith(%r)' % (name, value)
-            else:
-                return '0'
-        elif selector.operator == '*=':
-            if value:
-                return '(%r in el.get(%r, ""))' % (value, name)
-            else:
-                return '0'
-        else:
-            raise ValueError('Unknown attribute operator', selector.operator)
+                raise ValueError(
+                    'Unknown attribute operator', selector.operator)
+        else:  # In any namespace
+            raise NotImplementedError  # TODO
 
     elif isinstance(selector, parser.PseudoClassSelector):
         if selector.name == 'link':
@@ -240,24 +240,30 @@ def _translate(selector):
             # TODO
             return '0'
         elif selector.name == 'root':
-            return '(el.getparent() is None)'
+            return '(el.parent is None)'
         elif selector.name == 'first-child':
-            return '(el.getprevious() is None)'
+            return '(el.parent is not None and el.previous is None)'
         elif selector.name == 'last-child':
-            return '(el.getnext() is None)'
+            return ('(el.parent is not None and '
+                    'el.index + 1 == len(el.parent.etree_children))')
         elif selector.name == 'first-of-type':
-            return ('(next(el.itersiblings(el.tag, preceding=1), None)'
-                    ' is None)')
+            return ('(el.parent is not None and '
+                    'all(s.tag != el.etree_element.tag'
+                    '    for s in el.parent.etree_children[:el.index]))')
         elif selector.name == 'last-of-type':
-            return '(next(el.itersiblings(el.tag), None) is None)'
+            return ('(el.parent is not None and '
+                    'all(s.tag != el.etree_element.tag'
+                    '    for s in el.parent.etree_children[el.index + 1:]))')
         elif selector.name == 'only-child':
-            return '(el.getprevious() is None and el.getnext() is None)'
+            return ('(el.parent is not None and '
+                    ' len(el.parent.etree_children) == 1)')
         elif selector.name == 'only-of-type':
-            return ('(next(el.itersiblings(el.tag, preceding=1), None)'
-                    ' is None and '
-                    'next(el.itersiblings(el.tag), None) is None)')
+            return ('(el.parent is not None and '
+                    'all(s.tag != el.etree_element.tag'
+                    '    for s in el.parent.etree_children[:el.index]'
+                    '           + el.parent.etree_children[el.index + 1:]))')
         elif selector.name == 'empty':
-            return '(next(el.iterchildren(), None) is None and not el.text)'
+            return '(not (el.etree_children or el.etree_element.text))'
         else:
             raise ValueError('Unknown pseudo-class', selector.name)
 
@@ -272,12 +278,10 @@ def _translate(selector):
             else:
                 raise ValueError('Invalid arguments for :lang()')
 
-            name = 'lang'  # TODO: make this configurable.
             # TODO: matching should be case-insensitive
-            lang = parser.AttributeSelector('', name, '|=', lang)
-            ancestor = parser.CombinedSelector(
-                lang, ' ', parser.CompoundSelector([]))
-            return '(%s or %s)' % (_translate(lang), _translate(ancestor))
+            return ('(el.lang is not None and '
+                    ' (el.lang == %r or el.lang.startswith(%r)))'
+                    % (lang, lang + '-'))
         else:
             result = parse_nth(selector.arguments)
             if result is None:
@@ -290,21 +294,27 @@ def _translate(selector):
             B = b - 1
             if a == 0:
                 # x = B
-                test = '(sum(1 for _ in %%s) == %i)' % B
+                test = '(el.parent is not None and (%%s) == %i)' % B
             else:
                 # n = (x - B) / a
                 # Empty list for False, non-empty list for True
-                test = ('[1 for n, r in [divmod(sum(1 for _ in %%s) - %i, %i)]'
-                        ' if r == 0 and n >= 0]' % (B, a))
+                test = ('(el.parent is not None and '
+                        ' [1 for n, r in [divmod((%%s) - %i, %i)]'
+                        '  if r == 0 and n >= 0])'
+                        % (B, a))
 
             if selector.name == 'nth-child':
-                return test % 'el.itersiblings(preceding=1)'
+                return test % 'el.index'
             elif selector.name == 'nth-last-child':
-                return test % 'el.itersiblings()'
+                return test % 'len(el.parent.etree_children) - el.index - 1'
             elif selector.name == 'nth-of-type':
-                return test % 'el.itersiblings(el.tag, preceding=1)'
+                return test % (
+                    'sum(1 for s in el.parent.etree_children[:el.index]'
+                    '    if s.tag == el.etree_element.tag)')
             elif selector.name == 'nth-last-of-type':
-                return test % 'el.itersiblings(el.tag)'
+                return test % (
+                    'sum(1 for s in el.parent.etree_children[el.index + 1:]'
+                    '    if s.tag == el.etree_element.tag)')
             else:
                 raise ValueError('Unknown pseudo-class', selector.name)
 
