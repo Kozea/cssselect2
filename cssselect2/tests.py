@@ -11,7 +11,8 @@
 """
 
 from . import compile, match_simple
-from lxml import etree, html
+
+import xml.etree.ElementTree as etree
 
 
 def test_select():
@@ -145,8 +146,8 @@ def test_select():
 
 
 def test_select_shakespeare():
-    document = html.document_fromstring(HTML_SHAKESPEARE)
-    body = document.xpath('//body')[0]
+    document = etree.fromstring(HTML_SHAKESPEARE)
+    body = document.find('.//{http://www.w3.org/1999/xhtml}body')
 
     def count(selector):
         return sum(1 for _ in match_simple(body, compile(selector)))

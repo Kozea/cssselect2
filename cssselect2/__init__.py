@@ -46,11 +46,12 @@ def compile(input, namespaces=None):
             for selector in parser.parse(input, namespaces)]
 
 
-def match(tree, selectors):
+def match(root, selectors):
     """Match selectors against a document.
 
-    :param tree:
-        An lxml Element or ElementTree object.
+    :param root:
+        An :class:`~xml.etree.ElementTree.Element` or compatible object
+        for the root element of the tree to match against.
     :param selectors:
         A list of ``(selector, data)`` tuples.
         ``selector`` is a result from :func:`compile`.
@@ -65,9 +66,7 @@ def match(tree, selectors):
     selectors = [(selector, test, data)
                  for selector_list, data in selectors
                  for selector, test in selector_list]
-    if hasattr(tree, 'getroot'):
-        tree = tree.getroot()
-    stack = [iter([Element(tree)])]
+    stack = [iter([Element(root)])]
     while stack:
         element = next(stack[-1], None)
         if element is None:
@@ -81,18 +80,19 @@ def match(tree, selectors):
 
         stack.append(element.iter_children())
 
-def match_simple(tree, *selectors):
+def match_simple(root, *selectors):
     """Match selectors against a document.
 
-    :param tree:
-        An lxml Element or ElementTree object.
+    :param root:
+        An :class:`~xml.etree.ElementTree.Element` or compatible object
+        for the root element of the tree to match against.
     :param selectors:
         Results from :func:`compile`.
     :returns:
         A set of elements.
 
     """
-    results = match(tree, [(sel, None) for sel in selectors])
+    results = match(root, [(sel, None) for sel in selectors])
     return set(element for element, pseudo_element, _, _ in results
                if pseudo_element is None)
 
@@ -100,7 +100,8 @@ def match_simple(tree, *selectors):
 def _translate(selector):
     """Return a boolean expression, as a Python source string.
 
-    When evaluated in a context where the `el` variable is an lxml element,
+    When evaluated in a context where the `el` variable is an
+    :class:`~cssselect2.tree.Element` object,
     tells whether the element is a subject of `selector`.
 
     """
@@ -175,8 +176,6 @@ def _translate(selector):
             return test
 
     elif isinstance(selector, parser.LocalNameSelector):
-        # In lxml, Element.tag is a string with the format '{ns}local_name'
-        # or just 'local_name' for the empty namespace.
         return '(el.local_name == %r)' % selector.local_name
 
     elif isinstance(selector, parser.NamespaceSelector):
@@ -190,7 +189,10 @@ def _translate(selector):
 
     elif isinstance(selector, parser.AttributeSelector):
         if selector.namespace is not None:
-            key = '{%s}%s' % (selector.namespace, selector.name)
+            if selector.namespace:
+                key = '{%s}%s' % (selector.namespace, selector.name)
+            else:
+                key = selector.name
             value = selector.value
             if selector.operator is None:
                 return '(el.get_attr(%r) is not None)' % key
