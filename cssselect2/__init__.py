@@ -10,7 +10,8 @@
 
 """
 
-from tinycss2 import parse_component_value_list
+from __future__ import unicode_literals
+
 from tinycss2.nth import parse_nth
 
 from . import parser
@@ -19,12 +20,13 @@ from . import parser
 VERSION = '0.1a0'
 
 
-def compile_string(string, namespaces=None):
+def compile(input, namespaces=None):
     """Compile a list of selectors.
 
-    :param string:
-        The selectors, as a string. Can be either a single selector or a list
-        of comma-separated selectors, as in CSS stylesheets.
+    :param input:
+        A :term:`tinycss2:string`,
+        or an iterable of tinycss2 :term:`tinycss2:component values`
+        such as the :attr:`~tinycss2.ast.QualifiedRule.predule` on a style rule.
     :param namespaces:
         A dictionary of all `namespace prefix declarations
         <http://www.w3.org/TR/selectors/#nsdecl>`_ in scope for this selector.
@@ -34,20 +36,13 @@ def compile_string(string, namespaces=None):
         An opaque object to be passed to :func:`match` or :func:`match_simple`.
 
     """
-    if isinstance(string, bytes):
-        string = string.decode('ascii')
-    return compile_component_values(
-        parse_component_value_list(string), namespaces)
-
-
-def compile_component_values(tokens, namespaces=None):
     """Same as :func:`compile_string`, but the input is a list of tinycss2
     component values rather than a string.
 
     """
     return [(selector, eval('lambda el: ' + _translate(selector.parsed_tree),
                             {}, {}))
-            for selector in parser.parse(tokens, namespaces)]
+            for selector in parser.parse(input, namespaces)]
 
 
 def match(tree, selectors):
@@ -56,9 +51,10 @@ def match(tree, selectors):
     :param tree:
         An lxml Element or ElementTree object.
     :param selectors:
-        A list of ``(selector, data)`` tuples. ``selector`` is a result from
-        :func:`compile_string` or :func:`compile_tokens`. ``data`` can be
-        any object associated to the selector (such as a declaration block)
+        A list of ``(selector, data)`` tuples.
+        ``selector`` is a result from :func:`compile`.
+        ``data`` can be any object associated to the selector
+        (such as a declaration block)
         and is returned in the results.
     :returns:
         A generator of ``(element, pseudo_element, specificity, data)``.
@@ -80,8 +76,8 @@ def match_simple(tree, *selectors):
 
     :param tree:
         An lxml Element or ElementTree object.
-    :param *selectors:
-        Results from :func:`compile_string` or :func:`compile_tokens`.
+    :param selectors:
+        Results from :func:`compile`.
     :returns:
         A set of elements.
 

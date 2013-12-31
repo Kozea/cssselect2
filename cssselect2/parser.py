@@ -10,14 +10,30 @@
 
 """
 
+from __future__ import unicode_literals
+
 import re
+
+from tinycss2 import parse_component_value_list
 
 
 __all__ = ['parse']
 
 
-def parse(tokens, namespaces=None):
-    tokens = TokenStream(tokens)
+try:
+    basestring = basestring
+except NameError:
+    basestring = str
+
+
+def parse(input, namespaces=None):
+    """
+    :param input:
+        A :term:`string`, or an iterable of :term:`component values`.
+    """
+    if isinstance(input, basestring):
+        input = parse_component_value_list(input)
+    tokens = TokenStream(input)
     namespaces = namespaces or {}
     yield parse_selector(tokens, namespaces)
     while 1:

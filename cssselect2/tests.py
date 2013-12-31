@@ -10,7 +10,7 @@
 
 """
 
-from . import compile_string, match_simple
+from . import compile, match_simple
 from lxml import etree, html
 
 
@@ -21,7 +21,7 @@ def test_select():
     ).__getitem__
 
     def select_ids(selector, html_only):
-        items = list(match_simple(document, compile_string(selector)))
+        items = list(match_simple(document, compile(selector)))
         if html_only:
             raise NotImplementedError
         items.sort(key=sort_key)
@@ -149,7 +149,7 @@ def test_select_shakespeare():
     body = document.xpath('//body')[0]
 
     def count(selector):
-        return sum(1 for _ in match_simple(body, compile_string(selector)))
+        return sum(1 for _ in match_simple(body, compile(selector)))
 
     # Data borrowed from http://mootools.net/slickspeed/
 
