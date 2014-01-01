@@ -59,6 +59,16 @@ class Element(object):
             )
             yield child
 
+    def iter(self):
+        stack = [iter([self])]
+        while stack:
+            element = next(stack[-1], None)
+            if element is None:
+                stack.pop()
+            else:
+                yield element
+                stack.append(element.iter_children())
+
     @cached_property
     def etree_children(self):
         return [c for c in self.etree_element if isinstance(c.tag, basestring)]

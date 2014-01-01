@@ -21,8 +21,8 @@ from .tree import Element, split_whitespace
 VERSION = '0.1a0'
 
 
-def compile(input, namespaces=None):
-    """Compile a list of selectors.
+def compile_selector_list(input, namespaces=None):
+    """Compile a (comma-separated) list of selectors.
 
     :param input:
         A :term:`tinycss2:string`,
@@ -32,18 +32,31 @@ def compile(input, namespaces=None):
         A dictionary of all `namespace prefix declarations
         <http://www.w3.org/TR/selectors/#nsdecl>`_ in scope for this selector.
         Keys are namespace prefixes as strings, or ``None`` for the default
-        namespace. Values are namespace URIs.
+        namespace.
+        Values are namespace URLs.
     :returns:
-        An opaque object to be passed to :func:`match` or :func:`match_simple`.
+        A list of opaque :class:`CompiledSelector` objects.
 
     """
-    """Same as :func:`compile_string`, but the input is a list of tinycss2
-    component values rather than a string.
+    return [
+        CompiledSelector(
+            eval(
+                'lambda el: ' + _compile_node(selector.parsed_tree),
+                {'split_whitespace': split_whitespace},
+                {},
+            ),
+            selector.specificity,
+            selector.pseudo_element,
+        )
+        for selector in parser.parse(input, namespaces)
+    ]
 
-    """
-    return [(selector, eval('lambda el: ' + _translate(selector.parsed_tree),
-                            {'split_whitespace': split_whitespace}))
-            for selector in parser.parse(input, namespaces)]
+
+class CompiledSelector(object):
+    def __init__(self, test, specificity, pseudo_element):
+        self.test = test
+        self.specificity = specificity
+        self.pseudo_element = pseudo_element
 
 
 def match(root, selectors):
@@ -54,7 +67,7 @@ def match(root, selectors):
         for the root element of the tree to match against.
     :param selectors:
         A list of ``(selector, data)`` tuples.
-        ``selector`` is a result from :func:`compile`.
+        ``selector`` is a result from :func:`compile_selector_list`.
         ``data`` can be any object associated to the selector
         (such as a declaration block)
         and is returned in the results.
@@ -63,22 +76,13 @@ def match(root, selectors):
         The order of results is unspecified.
 
     """
-    selectors = [(selector, test, data)
-                 for selector_list, data in selectors
-                 for selector, test in selector_list]
-    stack = [iter([Element(root)])]
-    while stack:
-        element = next(stack[-1], None)
-        if element is None:
-            stack.pop()
-            continue
+    for element in Element(root).iter():
+        for selector_list, data in selectors:
+            for selector in selector_list:
+                if selector.test(element):
+                    yield (element.etree_element, selector.pseudo_element,
+                           selector.specificity, data)
 
-        for selector, test, data in selectors:
-            if test(element):
-                yield (element.etree_element, selector.pseudo_element,
-                       selector.specificity, data)
-
-        stack.append(element.iter_children())
 
 def match_simple(root, *selectors):
     """Match selectors against a document.
@@ -87,7 +91,7 @@ def match_simple(root, *selectors):
         An :class:`~xml.etree.ElementTree.Element` or compatible object
         for the root element of the tree to match against.
     :param selectors:
-        Results from :func:`compile`.
+        Results from :func:`compile_selector_list`.
     :returns:
         A set of elements.
 
@@ -97,7 +101,7 @@ def match_simple(root, *selectors):
                if pseudo_element is None)
 
 
-def _translate(selector):
+def _compile_node(selector):
     """Return a boolean expression, as a Python source string.
 
     When evaluated in a context where the `el` variable is an
@@ -112,7 +116,7 @@ def _translate(selector):
     # 1 and 0 are used for True and False to avoid global lookups.
 
     if isinstance(selector, parser.CombinedSelector):
-        left_inside = _translate(selector.left)
+        left_inside = _compile_node(selector.left)
         if left_inside == '0':
             return '0'  # 0 and x == 0
         elif left_inside == '1':
@@ -143,7 +147,7 @@ def _translate(selector):
         else:
             raise ValueError('Unknown combinator', selector.combinator)
 
-        right = _translate(selector.right)
+        right = _compile_node(selector.right)
         if right == '0':
             return '0'  # 0 and x == 0
         elif right == '1':
@@ -154,7 +158,7 @@ def _translate(selector):
 
     elif isinstance(selector, parser.CompoundSelector):
         sub_expressions = [
-            expr for expr in map(_translate, selector.simple_selectors)
+            expr for expr in map(_compile_node, selector.simple_selectors)
             if expr != '1']
         if len(sub_expressions) == 1:
             test = sub_expressions[0]
@@ -233,7 +237,7 @@ def _translate(selector):
     elif isinstance(selector, parser.PseudoClassSelector):
         if selector.name == 'link':
             # XXX HTML-only
-            return _translate('a[href]')
+            return _compile_node('a[href]')
         elif selector.name in ('visited', 'hover', 'active', 'focus',
                                 'target'):
             # Not applicable in a static context: never match.
