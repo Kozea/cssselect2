@@ -103,7 +103,11 @@ def parse_simple_selector(tokens, namespaces, in_negation=False):
         return IDSelector(peek.value), None
     elif peek == '.':
         tokens.next()
-        return ClassSelector(get_ident(tokens.next())), None
+        next = tokens.next()
+        if next.type != 'ident':
+            raise SelectorError(
+                next, 'Expected a class name, got %s' % next.type)
+        return ClassSelector(next.value), None
     elif peek.type == '[] block':
         tokens.next()
         attr = parse_attribute_selector(TokenStream(peek.content), namespaces)
@@ -112,9 +116,13 @@ def parse_simple_selector(tokens, namespaces, in_negation=False):
         tokens.next()
         next = tokens.next()
         if next == ':':
-            return None, get_ident(tokens.next())
+            next = tokens.next()
+            if next.type != 'ident':
+                raise SelectorError(
+                    next, 'Expected a pseudo-element name, got %s' % next.type)
+            return None, next.lower_value
         elif next.type == 'ident':
-            name = ascii_lower(next.value)
+            name = next.lower_value
             if name in ('before', 'after', 'first-line', 'first-letter'):
                 return None, name
             else:
@@ -228,17 +236,6 @@ def parse_qualified_name(tokens, namespaces, is_attribute=False):
         raise SelectorError(next, 'Expected local name, got %s' % next.type)
 
 
-def get_ident(token):
-    if token.type != 'ident':
-        raise SelectorError(token, 'Expected IDENT, got %s' % token.type)
-    return token.value
-
-
-def ascii_lower(string):
-    """Lower-case, but only in the ASCII range."""
-    return string.encode('utf8').lower().decode('utf8')
-
-
 class SelectorError(ValueError):
     """A specialized ValueError for invalid selectors."""
 
@@ -278,7 +275,7 @@ class Selector(object):
             #: Tuple of 3 integers: http://www.w3.org/TR/selectors/#specificity
             self.specificity = tree.specificity
         else:
-            self.pseudo_element = ascii_lower(pseudo_element)
+            self.pseudo_element = pseudo_element
             a, b, c = tree.specificity
             self.specificity = a, b, c + 1
 
