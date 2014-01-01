@@ -15,7 +15,7 @@ from __future__ import unicode_literals
 from tinycss2.nth import parse_nth
 
 from . import parser
-from .tree import Element, split_whitespace
+from .tree import ElementWrapper, split_whitespace
 
 
 VERSION = '0.1a0'
@@ -76,7 +76,7 @@ def match(root, selectors):
         The order of results is unspecified.
 
     """
-    for element in Element(root).iter():
+    for element in ElementWrapper.from_root(root).iter_subtree():
         for selector_list, data in selectors:
             for selector in selector_list:
                 if selector.test(element):
