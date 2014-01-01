@@ -10,23 +10,25 @@
 
 """
 
-from . import compile_selector_list, match_simple
+from . import compile_selector_list, ElementWrapper
 
 import xml.etree.ElementTree as etree
 
 
 def test_select():
     document = etree.fromstring(HTML_IDS)
-    sort_key = dict(
-        (el, count) for count, el in enumerate(document.getiterator())
-    ).__getitem__
+    root = ElementWrapper.from_root(document)
+    element_positions = dict(
+        (el, i) for i, el in enumerate(document.iter())
+    )
+    sort_key = lambda wrapper: element_positions[wrapper.etree_element]
 
     def select_ids(selector, html_only):
-        items = list(match_simple(document, compile_selector_list(selector)))
+        items = list(root.query_all(selector))
         if html_only:
             raise NotImplementedError
         items.sort(key=sort_key)
-        return [element.get('id', 'nil') for element in items]
+        return [element.id or 'nil' for element in items]
 
     def pcss(main, *selectors, **kwargs):
         html_only = kwargs.pop('html_only', False)
@@ -148,10 +150,10 @@ def test_select():
 def test_select_shakespeare():
     document = etree.fromstring(HTML_SHAKESPEARE)
     body = document.find('.//{http://www.w3.org/1999/xhtml}body')
+    body = ElementWrapper.from_root(body)
 
     def count(selector):
-        return sum(1 for _ in match_simple(
-            body, compile_selector_list(selector)))
+        return sum(1 for _ in body.query_all(selector))
 
     # Data borrowed from http://mootools.net/slickspeed/
 

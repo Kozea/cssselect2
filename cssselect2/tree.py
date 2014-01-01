@@ -2,9 +2,8 @@
 
 from __future__ import unicode_literals
 
-import re
-
-from ._compat import basestring
+from .compiler import compile_selector_list, split_whitespace
+from ._compat import basestring, ifilter
 
 
 class cached_property(object):
@@ -45,7 +44,8 @@ class ElementWrapper(object):
             An ElementTree :class:`~xml.etree.ElementTree.Element`
             for the root element of a document.
             If the given element is not the root,
-            selector matching will be `scope-contained`_
+            selector matching will behave is if it were.
+            In other words, selectors will be `scope-contained`_
             to the subtree rooted at that element.
         :returns:
             A new :class:`ElementWrapper`
@@ -139,6 +139,55 @@ class ElementWrapper(object):
                 yield element
                 stack.append(element.iter_children())
 
+    def query_all(self, *selectors):
+        """
+        Return elements, in tree order, that match any of the given selectors.
+
+        Selectors are `scope-filtered`_ to the subtree rooted at this element.
+
+        .. _scope-filtered: http://dev.w3.org/csswg/selectors4/#scope-filtered
+
+        :param selectors:
+            Each given selector is either a :class:`CompiledSelector`,
+            or an argument to :func:`compile_selector_list`.
+        :returns:
+            An iterator of newly-created :class:`ElementWrapper` objects.
+
+        """
+        tests = [
+            compiled_selector.test
+            for selector in selectors
+            for compiled_selector in (
+                [selector] if hasattr(selector, 'test')
+                else compile_selector_list(selector)
+            )
+            if compiled_selector.pseudo_element is None
+        ]
+        if len(tests) == 1:
+            return ifilter(tests[0], self.iter_subtree())
+        elif selectors:
+            return (
+                element
+                for element in self.iter_subtree()
+                if any(test(element) for test in tests)
+            )
+        else:
+            return iter(())
+
+    def query(self, *selectors):
+        """Return the first element (in tree order)
+        that matches any of the given selectors.
+
+        :param selectors:
+            Each given selector is either a :class:`CompiledSelector`,
+            or an argument to :func:`compile_selector_list`.
+        :returns:
+            A newly-created :class:`ElementWrapper` object,
+            or :obj:`None` if there is no match.
+
+        """
+        return next(self.query_all(*selectors), None)
+
     @cached_property
     def etree_children(self):
         """This element’s children,
@@ -212,10 +261,6 @@ class ElementWrapper(object):
             return lang
         if self.parent is not None:
             return self.parent.lang
-
-
-# http://dev.w3.org/csswg/selectors/#whitespace
-split_whitespace = re.compile('[^ \t\r\n\f]+').findall
 
 
 def _split_etree_tag(tag):
