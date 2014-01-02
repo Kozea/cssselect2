@@ -36,6 +36,9 @@ class ElementWrapper(object):
     and other elements should be accessed (and wrappers generated)
     using methods such as :meth:`iter_children` and :meth:`iter_subtree`.
 
+    :class:`ElementWrapper` objects compare equal
+    if their underlying :class:`~xml.etree.ElementTree.Element` do.
+
     """
     @classmethod
     def from_root(cls, root):
@@ -70,6 +73,16 @@ class ElementWrapper(object):
 
         # See the get_attr method below.
         self.get_attr = etree_element.get
+
+    def __eq__(self, other):
+        return (type(self) == type(other) and
+                self.etree_element == other.etree_element)
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __hash__(self):
+        return hash((type(self), self.etree_element))
 
     def iter_ancestors(self):
         """Return an iterator of existing :class:`ElementWrapper` objects
