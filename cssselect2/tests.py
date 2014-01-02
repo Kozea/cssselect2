@@ -16,17 +16,12 @@ import xml.etree.ElementTree as etree
 
 
 def test_select():
-    document = etree.fromstring(HTML_IDS)
-    root = ElementWrapper.from_root(document)
-    sort_key = dict(
-        (el, i) for i, el in enumerate(root.iter_subtree())
-    ).__getitem__
+    root = ElementWrapper.from_root(etree.fromstring(HTML_IDS))
 
     def select_ids(selector, html_only):
         items = list(root.query_all(selector))
         if html_only:
             raise NotImplementedError
-        items.sort(key=sort_key)
         return [element.get_attr('id', 'nil') for element in items]
 
     def pcss(main, *selectors, **kwargs):
