@@ -42,6 +42,5 @@ def match(root, matcher):
 
 if __name__ == '__main__':
     root, matcher = parse('http://dev.w3.org/csswg/selectors4/')
-    print(len(matcher.selectors))
     for t in timeit.repeat(lambda: match(root, matcher), number=3):
         print('%.3f' % t)

@@ -24,8 +24,12 @@ VERSION = '0.1a0'
 
 class Matcher(object):
     def __init__(self):
-        self.selectors = []
-        self.is_sorted = True
+        self.id_selectors = {}
+        self.class_selectors = {}
+        self.local_name_selectors = {}
+        self.namespace_selectors = {}
+        self.other_selectors = []
+        self.needs_sorting = []
 
     def add_selector(self, selector, payload):
         """
@@ -41,8 +45,22 @@ class Matcher(object):
             and will be returned as-is by :meth:`match`.
 
         """
-        self.is_sorted = False
-        self.selectors.append((selector.test, selector.specificity, payload))
+        if selector.id is not None:
+            selector_list = self.id_selectors.setdefault(selector.id, [])
+        elif selector.class_name is not None:
+            selector_list = self.class_selectors.setdefault(
+                selector.class_name, [])
+        elif selector.local_name is not None:
+            selector_list = self.local_name_selectors.setdefault(
+                selector.local_name, [])
+        elif selector.namespace is not None:
+            selector_list = self.namespace_selectors.setdefault(
+                selector.namespace, [])
+        else:
+            selector_list = self.other_selectors
+
+        self.needs_sorting.append(selector_list)
+        selector_list.append((selector.test, selector.specificity, payload))
 
 
     def match(self, element):
@@ -57,9 +75,26 @@ class Matcher(object):
             in order of highest to lowest :attr:`~CompiledSelector.specificity`.
 
         """
-        if not self.is_sorted:
-            self.selectors.sort(key=operator.itemgetter(1), reverse=True)
-            self.is_sorted = True
-        for test, _, payload in self.selectors:
+        while self.needs_sorting:
+            self.needs_sorting.pop().sort(
+                key=operator.itemgetter(1), reverse=True)
+
+        if element.id is not None:
+            for test, _, payload in self.id_selectors.get(element.id, ()):
+                if test(element):
+                    yield payload
+        for class_name in element.classes:
+            for test, _, payload in self.class_selectors.get(class_name, ()):
+                if test(element):
+                    yield payload
+        for test, _, payload in self.local_name_selectors.get(
+                element.local_name, ()):
+            if test(element):
+                yield payload
+        for test, _, payload in self.namespace_selectors.get(
+                element.namespace_url, ()):
+            if test(element):
+                yield payload
+        for test, _, payload in self.other_selectors:
             if test(element):
                 yield payload

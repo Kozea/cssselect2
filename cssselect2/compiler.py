@@ -30,24 +30,37 @@ def compile_selector_list(input, namespaces=None):
 
     """
     return [
-        CompiledSelector(
-            eval(
-                'lambda el: ' + _compile_node(selector.parsed_tree),
-                {'split_whitespace': split_whitespace},
-                {},
-            ),
-            selector.specificity,
-            selector.pseudo_element,
-        )
+        CompiledSelector(selector)
         for selector in parser.parse(input, namespaces)
     ]
 
 
 class CompiledSelector(object):
-    def __init__(self, test, specificity, pseudo_element):
-        self.test = test
-        self.specificity = specificity
-        self.pseudo_element = pseudo_element
+    def __init__(self, parsed_selector):
+        self.test = eval(
+            'lambda el: ' + _compile_node(parsed_selector.parsed_tree),
+            {'split_whitespace': split_whitespace},
+            {},
+        )
+        self.specificity = parsed_selector.specificity
+        self.pseudo_element = parsed_selector.pseudo_element
+        self.id = None
+        self.class_name = None
+        self.local_name = None
+        self.namespace = None
+
+        node = parsed_selector.parsed_tree
+        if isinstance(node, parser.CombinedSelector):
+            node = node.right
+        for simple_selector in node.simple_selectors:
+            if isinstance(simple_selector, parser.IDSelector):
+                self.id = simple_selector.ident
+            elif isinstance(simple_selector, parser.ClassSelector):
+                self.class_name = simple_selector.class_name
+            elif isinstance(simple_selector, parser.LocalNameSelector):
+                self.local_name = simple_selector.local_name
+            elif isinstance(simple_selector, parser.NamespaceSelector):
+                self.namespace = simple_selector.namespace_url
 
 
 def _compile_node(selector):
