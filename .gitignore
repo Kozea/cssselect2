@@ -7,3 +7,4 @@
 /.tox
 /docs/_build
 /env
+/profile
