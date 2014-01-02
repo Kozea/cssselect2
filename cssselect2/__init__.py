@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 
 import operator
 
+from .parser import SelectorError
 from .tree import ElementWrapper
 from .compiler import compile_selector_list, CompiledSelector
 
