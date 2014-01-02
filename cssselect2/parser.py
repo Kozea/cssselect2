@@ -49,7 +49,7 @@ def parse_selector(tokens, namespaces):
         if pseudo_element is not None:
             return Selector(result, pseudo_element)
         peek = tokens.peek()
-        if peek is None:
+        if peek is None or peek == ',':
             return Selector(result, pseudo_element)
         elif peek in ('>', '+', '~'):
             combinator = peek.value
@@ -75,6 +75,7 @@ def parse_compound_selector(tokens, namespaces):
     if simple_selectors or type_selectors is not None:
         return CompoundSelector(simple_selectors), pseudo_element
     else:
+        peek = tokens.peek()
         raise SelectorError(peek, 'expected a compound selector, got %s'
                             % (peek.type if peek else 'EOF'))
 

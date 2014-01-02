@@ -40,6 +40,7 @@ def test_select():
 #        'outer-div', 'li-div', 'foobar-div']  # case-insensitive in HTML
     assert pcss('div div') == ['li-div']
     assert pcss('div, div div') == ['outer-div', 'li-div', 'foobar-div']
+    assert pcss('div , div div') == ['outer-div', 'li-div', 'foobar-div']
     assert pcss('a[name]') == ['name-anchor']
 #    assert pcss('a[NAme]', html_only=True) == [
 #        'name-anchor'] # case-insensitive in HTML:
