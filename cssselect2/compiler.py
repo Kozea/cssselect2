@@ -186,7 +186,8 @@ def _compile_node(selector):
     elif isinstance(selector, parser.PseudoClassSelector):
         if selector.name == 'link':
             # XXX HTML-only
-            return _compile_node('a[href]')
+            return ('(el.etree_element.tag == "{http://www.w3.org/1999/xhtml}a"'
+                    ' and el.get_attr("href") is not None)')
         elif selector.name in ('visited', 'hover', 'active', 'focus',
                                 'target'):
             # Not applicable in a static context: never match.
