@@ -75,12 +75,13 @@ class Matcher(object):
         :returns:
             An iterable of the :obj:`payload` objects associated
             to selectors that match element,
-            in order of highest to lowest :attr:`~CompiledSelector.specificity`.
+            in order of lowest to highest :attr:`~CompiledSelector.specificity`,
+            and in order of addition with :meth:`add_selector`
+            among selectors of equal specificity.
 
         """
         while self.needs_sorting:
-            self.needs_sorting.pop().sort(
-                key=operator.itemgetter(1), reverse=True)
+            self.needs_sorting.pop().sort(key=operator.itemgetter(1))
 
         if element.id is not None:
             for test, _, payload in self.id_selectors.get(element.id, ()):
