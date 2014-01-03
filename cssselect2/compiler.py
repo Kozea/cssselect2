@@ -85,27 +85,23 @@ def _compile_node(selector):
         elif left_inside == '1':
             # 1 and x == x, but the element matching 1 still needs to exist.
             if selector.combinator in (' ', '>'):
-                left = '(el.parent is not None)'
+                left = 'el.parent is not None'
             elif selector.combinator in ('~', '+'):
-                left = '(el.previous is not None)'
+                left = 'el.previous is not None'
             else:
                 raise SelectorError('Unknown combinator', selector.combinator)
         # Rebind the `el` name inside a generator-expressions (in a new scope)
         # so that 'left_inside' applies to different elements.
         elif selector.combinator == ' ':
-            left = 'any(%s for el in el.iter_ancestors())' % left_inside
+            left = 'any((%s) for el in el.iter_ancestors())' % left_inside
         elif selector.combinator == '>':
-            # Empty list for False, non-empty list for True
-            # Use list(generator-expression) rather than [list-comprehension]
-            # to create a new scope for the el variable.
-            # List comprehensions do not create a scope in Python 2.x
-            left = ('list(1 for el in [el.parent] '
-                         'if el is not None and %s)' % left_inside)
+            left = ('next(el is not None and (%s) for el in [el.parent])'
+                    % left_inside)
         elif selector.combinator == '+':
-            left = ('list(1 for el in [el.previous] '
-                         'if el is not None and %s)' % left_inside)
+            left = ('next(el is not None and (%s) for el in [el.previous])'
+                    % left_inside)
         elif selector.combinator == '~':
-            left = ('any(%s for el in el.iter_previous_siblings())'
+            left = ('any((%s) for el in el.iter_previous_siblings())'
                     % left_inside)
         else:
             raise SelectorError('Unknown combinator', selector.combinator)
@@ -117,7 +113,7 @@ def _compile_node(selector):
             return left  # 1 and x == x
         else:
             # Evaluate combinators right to left:
-            return '(%s and %s)' % (right, left)
+            return '(%s) and (%s)' % (right, left)
 
     elif isinstance(selector, parser.CompoundSelector):
         sub_expressions = [
@@ -128,7 +124,7 @@ def _compile_node(selector):
         elif '0' in sub_expressions:
             test = '0'
         elif sub_expressions:
-            test = '(%s)' % ' and '.join(sub_expressions)
+            test = ' and '.join('(%s)' % e for e in sub_expressions)
         else:
             test = '1'  # all([]) == True
 
@@ -138,21 +134,21 @@ def _compile_node(selector):
             elif test == '1':
                 return '0'
             else:
-                return '(not %s)' % test
+                return 'not (%s)' % test
         else:
             return test
 
     elif isinstance(selector, parser.LocalNameSelector):
-        return '(el.local_name == %r)' % selector.local_name
+        return 'el.local_name == %r' % selector.local_name
 
     elif isinstance(selector, parser.NamespaceSelector):
-        return '(el.namespace_url == %r)' % selector.namespace
+        return 'el.namespace_url == %r' % selector.namespace
 
     elif isinstance(selector, parser.ClassSelector):
-        return '(%r in el.classes)' % selector.class_name
+        return '%r in el.classes' % selector.class_name
 
     elif isinstance(selector, parser.IDSelector):
-        return '(el.id == %r)' % selector.ident
+        return 'el.id == %r' % selector.ident
 
     elif isinstance(selector, parser.AttributeSelector):
         if selector.namespace is not None:
@@ -162,20 +158,19 @@ def _compile_node(selector):
                 key = selector.name
             value = selector.value
             if selector.operator is None:
-                return '(el.get_attr(%r) is not None)' % key
+                return 'el.get_attr(%r) is not None' % key
             elif selector.operator == '=':
-                return '(el.get_attr(%r) == %r)' % (key, value)
+                return 'el.get_attr(%r) == %r' % (key, value)
             elif selector.operator == '~=':
                 if len(value.split()) != 1 or value.strip() != value:
                     return '0'
                 else:
-                    return ('(%r in split_whitespace(el.get_attr(%r, "")))'
+                    return ('%r in split_whitespace(el.get_attr(%r, ""))'
                             % (value, key))
             elif selector.operator == '|=':
-                # Empty list for False, non-empty list for True
-                return ('[1 for value in [el.get_attr(%r)] if value == %r or'
-                        ' (value is not None and value.startswith(%r))]'
-                        % (key, value, value + '-'))
+                return ('next(v == %r or (v is not None and v.startswith(%r))'
+                        '     for v in [el.get_attr(%r)])'
+                        % (value, value + '-', key))
             elif selector.operator == '^=':
                 if value:
                     return 'el.get_attr(%r, "").startswith(%r)' % (key, value)
@@ -188,7 +183,7 @@ def _compile_node(selector):
                     return '0'
             elif selector.operator == '*=':
                 if value:
-                    return '(%r in el.get_attr(%r, ""))' % (value, key)
+                    return '%r in el.get_attr(%r, "")' % (value, key)
                 else:
                     return '0'
             else:
@@ -199,7 +194,7 @@ def _compile_node(selector):
 
     elif isinstance(selector, parser.PseudoClassSelector):
         if selector.name == 'link':
-            return ('(%s and el.get_attr("href") is not None)'
+            return ('%s and el.get_attr("href") is not None'
                      % html_tag_eq('a', 'area', 'link'))
         # TODO: for :disabled and :enabled on HTML elements
         # 'button', 'input', 'select', 'textarea', and 'option',
@@ -209,8 +204,8 @@ def _compile_node(selector):
         # http://www.whatwg.org/C#concept-fe-disabled
         elif selector.name == 'enabled':
             return (
-                '((%s and el.get_attr("disabled") is None) or '
-                ' (%s and el.get_attr("href") is not None))'
+                '(%s and el.get_attr("disabled") is None) or '
+                '(%s and el.get_attr("href") is not None)'
                 % (
                     html_tag_eq('button', 'input', 'select', 'textarea',
                                 'option', 'optgroup', 'menuitem', 'fieldset'),
@@ -219,14 +214,14 @@ def _compile_node(selector):
             )
         elif selector.name == 'disabled':
             return (
-                '(%s and el.get_attr("disabled") is not None)'
+                '%s and el.get_attr("disabled") is not None'
                 % html_tag_eq('button', 'input', 'select', 'textarea',
                               'option', 'optgroup', 'menuitem', 'fieldset')
             )
         elif selector.name == 'checked':
             return (
-                '((%s and el.get_attr("checked") is not None) or '
-                ' (%s and el.get_attr("selected") is not None))'
+                '(%s and el.get_attr("checked") is not None) or '
+                '(%s and el.get_attr("selected") is not None)'
                 % (
                     html_tag_eq('input', 'menuitem'),
                     html_tag_eq('option'),
@@ -237,30 +232,24 @@ def _compile_node(selector):
             # Not applicable in a static context: never match.
             return '0'
         elif selector.name == 'root':
-            return '(el.parent is None)'
+            return 'el.parent is None'
         elif selector.name == 'first-child':
-            return '(el.parent is not None and el.previous is None)'
+            return 'el.index == 0'
         elif selector.name == 'last-child':
-            return ('(el.parent is not None and '
-                    'el.index + 1 == len(el.parent.etree_children))')
+            return 'el.index + 1 == len(el.etree_siblings)'
         elif selector.name == 'first-of-type':
-            return ('(el.parent is not None and '
-                    'all(s.tag != el.etree_element.tag'
-                    '    for s in el.parent.etree_children[:el.index]))')
+            return ('all(s.tag != el.etree_element.tag'
+                    '    for s in el.etree_siblings[:el.index])')
         elif selector.name == 'last-of-type':
-            return ('(el.parent is not None and '
-                    'all(s.tag != el.etree_element.tag'
-                    '    for s in el.parent.etree_children[el.index + 1:]))')
+            return ('all(s.tag != el.etree_element.tag'
+                    '    for s in el.etree_siblings[el.index + 1:])')
         elif selector.name == 'only-child':
-            return ('(el.parent is not None and '
-                    ' len(el.parent.etree_children) == 1)')
+            return 'len(el.etree_siblings) == 1'
         elif selector.name == 'only-of-type':
-            return ('(el.parent is not None and '
-                    'all(s.tag != el.etree_element.tag'
-                    '    for s in el.parent.etree_children[:el.index]'
-                    '           + el.parent.etree_children[el.index + 1:]))')
+            return ('all(s.tag != el.etree_element.tag or i == el.index'
+                    '    for i, s in enumerate(el.etree_siblings))')
         elif selector.name == 'empty':
-            return '(not (el.etree_children or el.etree_element.text))'
+            return 'not (el.etree_children or el.etree_element.text)'
         else:
             raise SelectorError('Unknown pseudo-class', selector.name)
 
@@ -276,10 +265,23 @@ def _compile_node(selector):
                 raise SelectorError('Invalid arguments for :lang()')
 
             # TODO: matching should be case-insensitive
-            return ('(el.lang is not None and '
-                    ' (el.lang == %r or el.lang.startswith(%r)))'
+            return ('el.lang == %r or '
+                    '(el.lang is not None and el.lang.startswith(%r))'
                     % (lang, lang + '-'))
         else:
+            if selector.name == 'nth-child':
+                count = 'el.index'
+            elif selector.name == 'nth-last-child':
+                count = '(len(el.etree_siblings) - el.index - 1)'
+            elif selector.name == 'nth-of-type':
+                count = ('sum(1 for s in el.etree_siblings[:el.index]'
+                         '    if s.tag == el.etree_element.tag)')
+            elif selector.name == 'nth-last-of-type':
+                count = ('sum(1 for s in el.etree_siblings[el.index + 1:]'
+                         '    if s.tag == el.etree_element.tag)')
+            else:
+                raise SelectorError('Unknown pseudo-class', selector.name)
+
             result = parse_nth(selector.arguments)
             if result is None:
                 raise SelectorError(
@@ -292,29 +294,12 @@ def _compile_node(selector):
             B = b - 1
             if a == 0:
                 # x = B
-                test = '(el.parent is not None and (%%s) == %i)' % B
+                return '%s == %i' % (count, B)
             else:
                 # n = (x - B) / a
-                # Empty list for False, non-empty list for True
-                test = ('(el.parent is not None and '
-                        ' [1 for n, r in [divmod((%%s) - %i, %i)]'
-                        '  if r == 0 and n >= 0])'
-                        % (B, a))
-
-            if selector.name == 'nth-child':
-                return test % 'el.index'
-            elif selector.name == 'nth-last-child':
-                return test % 'len(el.parent.etree_children) - el.index - 1'
-            elif selector.name == 'nth-of-type':
-                return test % (
-                    'sum(1 for s in el.parent.etree_children[:el.index]'
-                    '    if s.tag == el.etree_element.tag)')
-            elif selector.name == 'nth-last-of-type':
-                return test % (
-                    'sum(1 for s in el.parent.etree_children[el.index + 1:]'
-                    '    if s.tag == el.etree_element.tag)')
-            else:
-                raise SelectorError('Unknown pseudo-class', selector.name)
+                return ('next(r == 0 and n >= 0'
+                        '     for n, r in [divmod(%s - %i, %i)])'
+                        % (count, B, a))
 
     else:
         raise TypeError(type(selector), selector)

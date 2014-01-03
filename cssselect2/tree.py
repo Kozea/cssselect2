@@ -58,7 +58,7 @@ class ElementWrapper(object):
         """
         if hasattr(root, 'getroot'):
             root = root.getroot()
-        return cls(root, parent=None, index=None, previous=None)
+        return cls(root, parent=None, index=0, previous=None)
 
     def __init__(self, etree_element, parent, index, previous):
         #: The underlying ElementTree :class:`~xml.etree.ElementTree.Element`
@@ -66,12 +66,20 @@ class ElementWrapper(object):
         #: The parent :class:`ElementWrapper`,
         #: or :obj:`None` for the root element.
         self.parent = parent
-        #: The position within the :attr:`parent`’s children (starts at 0),
-        #: or :obj:`None` for the root element.
-        self.index = index
         #: The previous sibling :class:`ElementWrapper`,
         #: or :obj:`None` for the root element.
         self.previous = previous
+        if parent is not None:
+            #: The :attr:`parent`’s children
+            #: as a list of
+            #: ElementTree :class:`~xml.etree.ElementTree.Element`s.
+            #: For the root (which has no parent)
+            self.etree_siblings = parent.etree_children
+        else:
+            self.etree_siblings = [etree_element]
+        #: The position within the :attr:`parent`’s children, counting from 0.
+        #: ``e.etree_siblings[e.index]`` is always ``e.etree_element``.
+        self.index = index
 
         # See the get_attr method below.
         self.get_attr = etree_element.get
