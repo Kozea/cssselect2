@@ -19,15 +19,84 @@ import xml.etree.ElementTree as etree
 import pytest
 
 
-@pytest.mark.parametrize('test', json.load(open(os.path.join(
-    os.path.dirname(__file__), 'tests', 'invalid_selectors.json'))))
+def resource(filename):
+    return os.path.join(os.path.dirname(__file__), 'tests', filename)
+
+
+def load_json(filename):
+    return json.load(open(resource(filename)))
+
+
+def get_test_document():
+    document = etree.parse(resource('content.xhtml'))
+    parent = document.find('.//*[@id="root"]')
+
+    # Setup namespace tests
+    any_ns = etree.SubElement(parent, '{http://www.w3.org/1999/xhtml}div');
+    no_ns = etree.SubElement(parent, '{http://www.w3.org/1999/xhtml}div');
+    any_ns.set('id', 'any-namespace')
+    no_ns.set('id', 'no-namespace')
+
+    div = [
+        etree.SubElement(any_ns, '{http://www.w3.org/1999/xhtml}div'),
+        etree.SubElement(any_ns, '{http://www.w3.org/1999/xhtml}div'),
+        etree.SubElement(any_ns, 'div'),
+        etree.SubElement(any_ns, '{http://www.example.org/ns}div'),
+    ]
+
+    div[0].set('id', 'any-namespace-div1')
+    div[1].set('id', 'any-namespace-div2')
+    div[2].set('id', 'any-namespace-div3')
+    div[3].set('id', 'any-namespace-div4')
+
+    div = [
+        etree.SubElement(no_ns, '{http://www.w3.org/1999/xhtml}div'),
+        etree.SubElement(no_ns, '{http://www.w3.org/1999/xhtml}div'),
+        etree.SubElement(no_ns, 'div'),
+        etree.SubElement(no_ns, '{http://www.example.org/ns}div'),
+    ]
+
+    div[0].set('id', 'no-namespace-div1')
+    div[1].set('id', 'no-namespace-div2')
+    div[2].set('id', 'no-namespace-div3')
+    div[3].set('id', 'no-namespace-div4')
+
+    return document
+
+
+TEST_DOCUMENT = get_test_document()
+
+
+@pytest.mark.parametrize('test', load_json('invalid_selectors.json'))
 def test_invalid_selectors(test):
+    if test.get('xfail'):
+        pytest.xfail()
     try:
         compile_selector_list(test['selector'])
     except SelectorError:
         pass
     else:
         raise AssertionError('Should be invalid: %(selector)r %(name)s' % test)
+
+
+@pytest.mark.parametrize('test', load_json('valid_selectors.json'))
+def test_valid_selectors(test):
+    if test.get('xfail'):
+        pytest.xfail()
+    exclude = test.get('exclude', ())
+    if 'document' in exclude or 'xhtml' in exclude:
+        return
+    root = ElementWrapper.from_root(TEST_DOCUMENT)
+    import tinycss2
+    print(tinycss2.parse_component_value_list(test['selector']))
+    print(repr(test['selector']))
+    result = [e.id for e in root.query_all(test['selector'])]
+    if result != test['expect']:
+        print(test['selector'])
+        print(result)
+        print('!=')
+        print(test['expect'])
+        raise AssertionError(test['name'])
 
 
 def test_select():

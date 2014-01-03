@@ -56,6 +56,8 @@ class ElementWrapper(object):
         .. _scope-contained: http://dev.w3.org/csswg/selectors4/#scope-contained-selectors
 
         """
+        if hasattr(root, 'getroot'):
+            root = root.getroot()
         return cls(root, parent=None, index=None, previous=None)
 
     def __init__(self, etree_element, parent, index, previous):

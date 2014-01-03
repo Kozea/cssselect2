@@ -61,7 +61,7 @@ class CompiledSelector(object):
             elif isinstance(simple_selector, parser.LocalNameSelector):
                 self.local_name = simple_selector.local_name
             elif isinstance(simple_selector, parser.NamespaceSelector):
-                self.namespace = simple_selector.namespace_url
+                self.namespace = simple_selector.namespace
 
 
 def _compile_node(selector):
@@ -199,15 +199,42 @@ def _compile_node(selector):
 
     elif isinstance(selector, parser.PseudoClassSelector):
         if selector.name == 'link':
-            # XXX HTML-only
-            return ('(el.etree_element.tag == "{http://www.w3.org/1999/xhtml}a"'
-                    ' and el.get_attr("href") is not None)')
+            return ('(%s and el.get_attr("href") is not None)'
+                     % html_tag_eq('a', 'area', 'link'))
+        # TODO: for :disabled and :enabled on HTML elements
+        # 'button', 'input', 'select', 'textarea', and 'option',
+        # "… or if it is a descendant of a fieldset element
+        #    whose disabled attribute is set and is not a descendant
+        #    of that fieldset element's first legend element child, if any."
+        # http://www.whatwg.org/C#concept-fe-disabled
+        elif selector.name == 'enabled':
+            return (
+                '((%s and el.get_attr("disabled") is None) or '
+                ' (%s and el.get_attr("href") is not None))'
+                % (
+                    html_tag_eq('button', 'input', 'select', 'textarea',
+                                'option', 'optgroup', 'menuitem', 'fieldset'),
+                    html_tag_eq('a', 'area', 'link'),
+                )
+            )
+        elif selector.name == 'disabled':
+            return (
+                '(%s and el.get_attr("disabled") is not None)'
+                % html_tag_eq('button', 'input', 'select', 'textarea',
+                              'option', 'optgroup', 'menuitem', 'fieldset')
+            )
+        elif selector.name == 'checked':
+            return (
+                '((%s and el.get_attr("checked") is not None) or '
+                ' (%s and el.get_attr("selected") is not None))'
+                % (
+                    html_tag_eq('input', 'menuitem'),
+                    html_tag_eq('option'),
+                )
+            )
         elif selector.name in ('visited', 'hover', 'active', 'focus',
-                                'target'):
+                               'target'):
             # Not applicable in a static context: never match.
-            return '0'
-        elif selector.name in ('enabled', 'disabled', 'checked'):
-            # TODO
             return '0'
         elif selector.name == 'root':
             return '(el.parent is None)'
@@ -291,3 +318,12 @@ def _compile_node(selector):
 
     else:
         raise TypeError(type(selector), selector)
+
+
+def html_tag_eq(*local_names):
+    if len(local_names) == 1:
+        return '(el.etree_element.tag == %r)' % (
+            '{http://www.w3.org/1999/xhtml}' + local_names[0])
+    else:
+        return '(el.etree_element.tag in (%s))' % ', '.join(
+            repr('{http://www.w3.org/1999/xhtml}' + n) for n in local_names)

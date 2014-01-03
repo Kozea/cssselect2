@@ -333,7 +333,7 @@ class LocalNameSelector(object):
         self.local_name = local_name
 
     def __repr__(self):
-        return local_name
+        return self.local_name
 
 
 class NamespaceSelector(object):
