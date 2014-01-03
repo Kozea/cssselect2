@@ -185,6 +185,7 @@ class ElementWrapper(object):
                 else compile_selector_list(selector)
             )
             if compiled_selector.pseudo_element is None
+            and not compiled_selector.never_matches
         ]
         if len(tests) == 1:
             return ifilter(tests[0], self.iter_subtree())

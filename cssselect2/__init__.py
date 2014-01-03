@@ -45,6 +45,9 @@ class Matcher(object):
             and will be returned as-is by :meth:`match`.
 
         """
+        if selector.never_matches:
+            return
+
         if selector.id is not None:
             selector_list = self.id_selectors.setdefault(selector.id, [])
         elif selector.class_name is not None:

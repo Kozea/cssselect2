@@ -38,8 +38,10 @@ def compile_selector_list(input, namespaces=None):
 
 class CompiledSelector(object):
     def __init__(self, parsed_selector):
+        source = _compile_node(parsed_selector.parsed_tree)
+        self.never_matches = source == '0'
         self.test = eval(
-            'lambda el: ' + _compile_node(parsed_selector.parsed_tree),
+            'lambda el: ' + source,
             {'split_whitespace': split_whitespace},
             {},
         )
