@@ -5,6 +5,7 @@ import re
 from tinycss2.nth import parse_nth
 
 from . import parser
+from .parser import SelectorError
 
 
 # http://dev.w3.org/csswg/selectors/#whitespace
@@ -88,7 +89,7 @@ def _compile_node(selector):
             elif selector.combinator in ('~', '+'):
                 left = '(el.previous is not None)'
             else:
-                raise ValueError('Unknown combinator', selector.combinator)
+                raise SelectorError('Unknown combinator', selector.combinator)
         # Rebind the `el` name inside a generator-expressions (in a new scope)
         # so that 'left_inside' applies to different elements.
         elif selector.combinator == ' ':
@@ -107,7 +108,7 @@ def _compile_node(selector):
             left = ('any(%s for el in el.iter_previous_siblings())'
                     % left_inside)
         else:
-            raise ValueError('Unknown combinator', selector.combinator)
+            raise SelectorError('Unknown combinator', selector.combinator)
 
         right = _compile_node(selector.right)
         if right == '0':
@@ -191,7 +192,7 @@ def _compile_node(selector):
                 else:
                     return '0'
             else:
-                raise ValueError(
+                raise SelectorError(
                     'Unknown attribute operator', selector.operator)
         else:  # In any namespace
             raise NotImplementedError  # TODO
@@ -234,7 +235,7 @@ def _compile_node(selector):
         elif selector.name == 'empty':
             return '(not (el.etree_children or el.etree_element.text))'
         else:
-            raise ValueError('Unknown pseudo-class', selector.name)
+            raise SelectorError('Unknown pseudo-class', selector.name)
 
     elif isinstance(selector, parser.FunctionalPseudoClassSelector):
         if selector.name == 'lang':
@@ -245,7 +246,7 @@ def _compile_node(selector):
             if len(tokens) == 1 and tokens[0].type == 'ident':
                 lang = tokens[0].value
             else:
-                raise ValueError('Invalid arguments for :lang()')
+                raise SelectorError('Invalid arguments for :lang()')
 
             # TODO: matching should be case-insensitive
             return ('(el.lang is not None and '
@@ -254,7 +255,8 @@ def _compile_node(selector):
         else:
             result = parse_nth(selector.arguments)
             if result is None:
-                raise ValueError('Invalid arguments for :%s()' % selector.name)
+                raise SelectorError(
+                    'Invalid arguments for :%s()' % selector.name)
             a, b = result
             # x is the number of siblings before/after the element
             # Matches if a positive or zero integer n exists so that:
@@ -285,7 +287,7 @@ def _compile_node(selector):
                     'sum(1 for s in el.parent.etree_children[el.index + 1:]'
                     '    if s.tag == el.etree_element.tag)')
             else:
-                raise ValueError('Unknown pseudo-class', selector.name)
+                raise SelectorError('Unknown pseudo-class', selector.name)
 
     else:
         raise TypeError(type(selector), selector)

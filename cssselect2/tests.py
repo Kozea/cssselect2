@@ -10,9 +10,24 @@
 
 """
 
-from . import compile_selector_list, ElementWrapper
+from . import compile_selector_list, ElementWrapper, SelectorError
 
+import json
+import os.path
 import xml.etree.ElementTree as etree
+
+import pytest
+
+
+@pytest.mark.parametrize('test', json.load(open(os.path.join(
+    os.path.dirname(__file__), 'tests', 'invalid_selectors.json'))))
+def test_invalid_selectors(test):
+    try:
+        compile_selector_list(test['selector'])
+    except SelectorError:
+        pass
+    else:
+        raise AssertionError('Should be invalid: %(selector)r %(name)s' % test)
 
 
 def test_select():

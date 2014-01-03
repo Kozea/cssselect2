@@ -105,9 +105,9 @@ def parse_simple_selector(tokens, namespaces, in_negation=False):
     elif peek == '.':
         tokens.next()
         next = tokens.next()
-        if next.type != 'ident':
+        if next is None or next.type != 'ident':
             raise SelectorError(
-                next, 'Expected a class name, got %s' % next.type)
+                next, 'Expected a class name, got %s' % next)
         return ClassSelector(next.value), None
     elif peek.type == '[] block':
         tokens.next()
@@ -118,17 +118,17 @@ def parse_simple_selector(tokens, namespaces, in_negation=False):
         next = tokens.next()
         if next == ':':
             next = tokens.next()
-            if next.type != 'ident':
+            if next is None or next.type != 'ident':
                 raise SelectorError(
-                    next, 'Expected a pseudo-element name, got %s' % next.type)
+                    next, 'Expected a pseudo-element name, got %s' % next)
             return None, next.lower_value
-        elif next.type == 'ident':
+        elif next is not None and next.type == 'ident':
             name = next.lower_value
             if name in ('before', 'after', 'first-line', 'first-letter'):
                 return None, name
             else:
                 return PseudoClassSelector(name), None
-        elif next.type == 'function':
+        elif next is not None and next.type == 'function':
             name = next.lower_name
             if name == 'not':
                 if in_negation:
@@ -137,7 +137,7 @@ def parse_simple_selector(tokens, namespaces, in_negation=False):
             else:
                 return FunctionalPseudoClassSelector(name, next.arguments), None
         else:
-            raise SelectorError(next, 'unexpected %s token.' % next.type)
+            raise SelectorError(next, 'unexpected %s token.' % next)
     else:
         return None, None
 
@@ -164,7 +164,7 @@ def parse_attribute_selector(tokens, namespaces):
     if qualified_name is None:
         next = tokens.next()
         raise SelectorError(
-            next, 'expected attribute name, got %s' % next.type)
+            next, 'expected attribute name, got %s' % next)
     namespace, local_name = qualified_name
 
     tokens.skip_whitespace()
@@ -210,7 +210,7 @@ def parse_qualified_name(tokens, namespaces, is_attribute=False):
         namespace = namespaces.get(first_ident.value)
         if namespace is None:
             raise SelectorError(
-                token, 'undefined namespace prefix: ' + first_ident.value)
+                first_ident, 'undefined namespace prefix: ' + first_ident.value)
     elif peek == '*':
         next = tokens.next()
         peek = tokens.peek()
