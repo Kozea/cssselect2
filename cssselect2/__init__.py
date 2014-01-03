@@ -29,7 +29,6 @@ class Matcher(object):
         self.local_name_selectors = {}
         self.namespace_selectors = {}
         self.other_selectors = []
-        self.needs_sorting = []
 
     def add_selector(self, selector, payload):
         """
@@ -62,9 +61,7 @@ class Matcher(object):
         else:
             selector_list = self.other_selectors
 
-        self.needs_sorting.append(selector_list)
         selector_list.append((selector.test, selector.specificity, payload))
-
 
     def match(self, element):
         """
@@ -80,25 +77,27 @@ class Matcher(object):
             among selectors of equal specificity.
 
         """
-        while self.needs_sorting:
-            self.needs_sorting.pop().sort(key=operator.itemgetter(1))
-
+        results = []
         if element.id is not None:
-            for test, _, payload in self.id_selectors.get(element.id, ()):
+            for test, specificity, payload in self.id_selectors.get(element.id, ()):
                 if test(element):
-                    yield payload
+                    results.append((specificity, payload))
         for class_name in element.classes:
-            for test, _, payload in self.class_selectors.get(class_name, ()):
+            for test, specificity, payload in self.class_selectors.get(class_name, ()):
                 if test(element):
-                    yield payload
-        for test, _, payload in self.local_name_selectors.get(
-                element.local_name, ()):
+                    results.append((specificity, payload))
+        for test, specificity, payload in self.local_name_selectors.get(element.local_name, ()):
             if test(element):
-                yield payload
-        for test, _, payload in self.namespace_selectors.get(
-                element.namespace_url, ()):
+                results.append((specificity, payload))
+        for test, specificity, payload in self.namespace_selectors.get(element.namespace_url, ()):
             if test(element):
-                yield payload
-        for test, _, payload in self.other_selectors:
+                results.append((specificity, payload))
+        for test, specificity, payload in self.other_selectors:
             if test(element):
-                yield payload
+                results.append((specificity, payload))
+
+        results.sort(key=SORT_KEY)
+        return (payload for _specificity, payload in results)
+
+
+SORT_KEY = operator.itemgetter(0)
