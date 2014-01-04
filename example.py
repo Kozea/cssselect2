@@ -1,5 +1,9 @@
-from urllib import urlopen
-from urlparse import urljoin
+try:
+    from urllib.request import urlopen
+    from urllib.parse import urljoin
+except ImportError:
+    from urllib import urlopen
+    from urlparse import urljoin
 import timeit
 
 import html5lib
@@ -35,7 +39,7 @@ def parse(url):
 
 
 def match(root, matcher):
-    for element in cssselect2.ElementWrapper.from_root(root).iter_subtree():
+    for element in cssselect2.ElementWrapper.from_html_root(root).iter_subtree():
         for _ in matcher.match(element):
             pass
 

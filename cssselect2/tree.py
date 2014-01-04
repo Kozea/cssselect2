@@ -34,7 +34,8 @@ class ElementWrapper(object):
     for Selector matching.
 
     This class should not be instanciated directly.
-    :meth:`from_root` should be used for the root element of a document,
+    :meth:`from_xml_root` or :meth:`from_html_root` should be used
+    for the root element of a document,
     and other elements should be accessed (and wrappers generated)
     using methods such as :meth:`iter_children` and :meth:`iter_subtree`.
 
@@ -43,8 +44,9 @@ class ElementWrapper(object):
 
     """
     @classmethod
-    def from_root(cls, root, in_html_document=True):
-        """
+    def from_xml_root(cls, root):
+        """Wrap for selector matching the root of an XML or XHTML document.
+
         :param root:
             An ElementTree :class:`~xml.etree.ElementTree.Element`
             for the root element of a document.
@@ -58,6 +60,23 @@ class ElementWrapper(object):
         .. _scope-contained: http://dev.w3.org/csswg/selectors4/#scope-contained-selectors
 
         """
+        return cls._from_root(root, in_html_document=False)
+
+    @classmethod
+    def from_html_root(cls, root):
+        """Same as :meth:`from_xml_root`,
+        but for documents parsed with an HTML parser
+        like `html5lib <http://html5lib.readthedocs.org/>`_,
+        which should be the case of documents with the ``text/html`` MIME type.
+
+        Compared to :meth:`from_xml_root`,
+        this makes element attribute names in Selectors case-insensitive.
+
+        """
+        return cls._from_root(root, in_html_document=True)
+
+    @classmethod
+    def _from_root(cls, root, in_html_document=True):
         if hasattr(root, 'getroot'):
             root = root.getroot()
         return cls(root, parent=None, index=0, previous=None,

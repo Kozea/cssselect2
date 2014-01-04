@@ -68,7 +68,7 @@ def test_valid_selectors(test):
     exclude = test.get('exclude', ())
     if 'document' in exclude or 'xhtml' in exclude:
         return
-    root = ElementWrapper.from_root(TEST_DOCUMENT)
+    root = ElementWrapper.from_xml_root(TEST_DOCUMENT)
     result = [e.id for e in root.query_all(test['selector'])]
     if result != test['expect']:
         print(test['selector'])
@@ -83,11 +83,9 @@ def test_select():
 
     def select_ids(selector, html_only):
         xml_ids = [element.get_attr('id', 'nil') for element in
-                   ElementWrapper.from_root(root, in_html_document=False)
-                   .query_all(selector)]
+                   ElementWrapper.from_xml_root(root).query_all(selector)]
         html_ids = [element.get_attr('id', 'nil') for element in
-                   ElementWrapper.from_root(root, in_html_document=True)
-                   .query_all(selector)]
+                    ElementWrapper.from_html_root(root).query_all(selector)]
         if html_only:
             assert xml_ids == []
         else:
@@ -214,7 +212,7 @@ def test_select():
 def test_select_shakespeare():
     document = etree.fromstring(HTML_SHAKESPEARE)
     body = document.find('.//{http://www.w3.org/1999/xhtml}body')
-    body = ElementWrapper.from_root(body)
+    body = ElementWrapper.from_xml_root(body)
 
     def count(selector):
         return sum(1 for _ in body.query_all(selector))

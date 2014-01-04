@@ -78,7 +78,6 @@ class Matcher(object):
             among selectors of equal specificity.
 
         """
-        element.is_html_element_in_html_document
         relevant_selectors = []
 
         if element.id is not None:
