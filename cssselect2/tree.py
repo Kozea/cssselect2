@@ -279,12 +279,14 @@ class ElementWrapper(object):
     @cached_property
     def lang(self):
         """The language of this element, as a string."""
+        # http://whatwg.org/C#language
         xml_lang = self.get_attr('{http://www.w3.org/XML/1998/namespace}lang')
         if xml_lang is not None:
             return ascii_lower(xml_lang)
-        lang = self.get_attr('lang')
-        if lang is not None:
-            return ascii_lower(lang)
+        if self.namespace_url == 'http://www.w3.org/1999/xhtml':
+            lang = self.get_attr('lang')
+            if lang is not None:
+                return ascii_lower(lang)
         if self.parent is not None:
             return self.parent.lang
 
