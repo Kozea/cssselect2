@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 import re
 
 from tinycss2.nth import parse_nth
+from webencodings import ascii_lower
 
 from . import parser
 from .parser import SelectorError
@@ -44,7 +45,7 @@ class CompiledSelector(object):
         self.never_matches = source == '0'
         self.test = eval(
             'lambda el: ' + source,
-            {'split_whitespace': split_whitespace},
+            {'split_whitespace': split_whitespace, 'ascii_lower': ascii_lower},
             {},
         )
         self.specificity = parsed_selector.specificity
@@ -208,32 +209,34 @@ def _compile_node(selector):
         if selector.name == 'link':
             return ('%s and el.get_attr("href") is not None'
                      % html_tag_eq('a', 'area', 'link'))
-        # TODO: for :disabled and :enabled on HTML elements
-        # 'button', 'input', 'select', 'textarea', and 'option',
-        # "… or if it is a descendant of a fieldset element
-        #    whose disabled attribute is set and is not a descendant
-        #    of that fieldset element's first legend element child, if any."
-        # http://www.whatwg.org/C#concept-fe-disabled
         elif selector.name == 'enabled':
             return (
+                '(%s and el.get_attr("disabled") is None'
+                ' and not el.in_disabled_fieldset) or'
                 '(%s and el.get_attr("disabled") is None) or '
                 '(%s and el.get_attr("href") is not None)'
                 % (
                     html_tag_eq('button', 'input', 'select', 'textarea',
-                                'option', 'optgroup', 'menuitem', 'fieldset'),
+                                'option'),
+                    html_tag_eq('optgroup', 'menuitem', 'fieldset'),
                     html_tag_eq('a', 'area', 'link'),
                 )
             )
         elif selector.name == 'disabled':
             return (
-                '%s and el.get_attr("disabled") is not None'
-                % html_tag_eq('button', 'input', 'select', 'textarea',
-                              'option', 'optgroup', 'menuitem', 'fieldset')
+                '(%s and (el.get_attr("disabled") is not None'
+                ' or el.in_disabled_fieldset)) or'
+                '(%s and el.get_attr("disabled") is not None)' % (
+                    html_tag_eq('button', 'input', 'select', 'textarea',
+                                'option'),
+                    html_tag_eq('optgroup', 'menuitem', 'fieldset'),
+                )
             )
         elif selector.name == 'checked':
             return (
-                '(%s and el.get_attr("checked") is not None) or '
-                '(%s and el.get_attr("selected") is not None)'
+                '(%s and el.get_attr("checked") is not None and '
+                'ascii_lower(el.get_attr("type", "")) in ("checkbox", "radio"))'
+                ' or (%s and el.get_attr("selected") is not None)'
                 % (
                     html_tag_eq('input', 'menuitem'),
                     html_tag_eq('option'),

@@ -269,13 +269,11 @@ class ElementWrapper(object):
     @cached_property
     def id(self):
         """The ID of this element, as a string."""
-        # TODO: make the attribute name configurable?
         return self.get_attr('id')
 
     @cached_property
     def classes(self):
         """The classes of this element, as a :class:`set` of strings."""
-        # TODO: make the attribute name configurable?
         return set(split_whitespace(self.get_attr('class', '')))
 
     @cached_property
@@ -284,12 +282,29 @@ class ElementWrapper(object):
         xml_lang = self.get_attr('{http://www.w3.org/XML/1998/namespace}lang')
         if xml_lang is not None:
             return ascii_lower(xml_lang)
-        # TODO: make the attribute name configurable?
         lang = self.get_attr('lang')
         if lang is not None:
             return ascii_lower(lang)
         if self.parent is not None:
             return self.parent.lang
+
+    @cached_property
+    def in_disabled_fieldset(self):
+        if self.parent is None:
+            return False
+        if (
+            self.parent.etree_element.tag ==
+                '{http://www.w3.org/1999/xhtml}fieldset' and
+            self.parent.get_attr('disabled') is not None and (
+                self.etree_element.tag !=
+                    '{http://www.w3.org/1999/xhtml}legend'
+                or any(s.etree_element.tag ==
+                       '{http://www.w3.org/1999/xhtml}legend'
+                       for s in self.iter_previous_siblings())
+            )
+        ):
+            return True
+        return self.parent.in_disabled_fieldset
 
     @cached_property
     def is_html_element_in_html_document(self):
