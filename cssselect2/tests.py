@@ -32,34 +32,16 @@ def get_test_document():
     parent = next(e for e in document.getiterator() if e.get('id') == 'root')
 
     # Setup namespace tests
-    any_ns = etree.SubElement(parent, '{http://www.w3.org/1999/xhtml}div');
-    no_ns = etree.SubElement(parent, '{http://www.w3.org/1999/xhtml}div');
-    any_ns.set('id', 'any-namespace')
-    no_ns.set('id', 'no-namespace')
-
-    div = [
-        etree.SubElement(any_ns, '{http://www.w3.org/1999/xhtml}div'),
-        etree.SubElement(any_ns, '{http://www.w3.org/1999/xhtml}div'),
-        etree.SubElement(any_ns, 'div'),
-        etree.SubElement(any_ns, '{http://www.example.org/ns}div'),
-    ]
-
-    div[0].set('id', 'any-namespace-div1')
-    div[1].set('id', 'any-namespace-div2')
-    div[2].set('id', 'any-namespace-div3')
-    div[3].set('id', 'any-namespace-div4')
-
-    div = [
-        etree.SubElement(no_ns, '{http://www.w3.org/1999/xhtml}div'),
-        etree.SubElement(no_ns, '{http://www.w3.org/1999/xhtml}div'),
-        etree.SubElement(no_ns, 'div'),
-        etree.SubElement(no_ns, '{http://www.example.org/ns}div'),
-    ]
-
-    div[0].set('id', 'no-namespace-div1')
-    div[1].set('id', 'no-namespace-div2')
-    div[2].set('id', 'no-namespace-div3')
-    div[3].set('id', 'no-namespace-div4')
+    for id in ('any-namespace', 'no-namespace'):
+        div = etree.SubElement(parent, '{http://www.w3.org/1999/xhtml}div')
+        div.set('id', id)
+        etree.SubElement(div, '{http://www.w3.org/1999/xhtml}div') \
+            .set('id', id + '-div1')
+        etree.SubElement(div, '{http://www.w3.org/1999/xhtml}div') \
+            .set('id', id + '-div2')
+        etree.SubElement(div, 'div').set('id', id + '-div3')
+        etree.SubElement(div, '{http://www.example.org/ns}div') \
+            .set('id', id + '-div4')
 
     return document
 
