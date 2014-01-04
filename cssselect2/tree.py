@@ -2,6 +2,8 @@
 
 from __future__ import unicode_literals
 
+from webencodings import ascii_lower
+
 from .compiler import compile_selector_list, split_whitespace
 from ._compat import basestring, ifilter
 
@@ -41,7 +43,7 @@ class ElementWrapper(object):
 
     """
     @classmethod
-    def from_root(cls, root):
+    def from_root(cls, root, in_html_document=True):
         """
         :param root:
             An ElementTree :class:`~xml.etree.ElementTree.Element`
@@ -58,9 +60,11 @@ class ElementWrapper(object):
         """
         if hasattr(root, 'getroot'):
             root = root.getroot()
-        return cls(root, parent=None, index=0, previous=None)
+        return cls(root, parent=None, index=0, previous=None,
+                   in_html_document=in_html_document)
 
-    def __init__(self, etree_element, parent, index, previous):
+    def __init__(self, etree_element, parent, index, previous,
+                 in_html_document):
         #: The underlying ElementTree :class:`~xml.etree.ElementTree.Element`
         self.etree_element = etree_element
         #: The parent :class:`ElementWrapper`,
@@ -80,7 +84,7 @@ class ElementWrapper(object):
         #: The position within the :attr:`parent`’s children, counting from 0.
         #: ``e.etree_siblings[e.index]`` is always ``e.etree_element``.
         self.index = index
-
+        self.in_html_document = in_html_document
         # See the get_attr method below.
         self.get_attr = etree_element.get
 
@@ -135,6 +139,7 @@ class ElementWrapper(object):
                 parent=self,
                 index=i,
                 previous=child,
+                in_html_document=self.in_html_document,
             )
             yield child
 
@@ -230,14 +235,14 @@ class ElementWrapper(object):
     def local_name(self):
         """The local name of this element, as a string."""
         namespace_url, local_name = _split_etree_tag(self.etree_element.tag)
-        self.__dict__['namespace_url'] = namespace_url
+        self.__dict__[str('namespace_url')] = namespace_url
         return local_name
 
     @cached_property
     def namespace_url(self):
         """The namespace URL of this element, as a string."""
         namespace_url, local_name = _split_etree_tag(self.etree_element.tag)
-        self.__dict__['local_name'] = local_name
+        self.__dict__[str('local_name')] = local_name
         return namespace_url
 
     # On instances, this is overridden by an instance attribute
@@ -278,13 +283,18 @@ class ElementWrapper(object):
         """The language of this element, as a string."""
         xml_lang = self.get_attr('{http://www.w3.org/XML/1998/namespace}lang')
         if xml_lang is not None:
-            return xml_lang
+            return ascii_lower(xml_lang)
         # TODO: make the attribute name configurable?
         lang = self.get_attr('lang')
         if lang is not None:
-            return lang
+            return ascii_lower(lang)
         if self.parent is not None:
             return self.parent.lang
+
+    @cached_property
+    def is_html_element_in_html_document(self):
+        return (self.in_html_document and
+                self.namespace_url == 'http://www.w3.org/1999/xhtml')
 
 
 def _split_etree_tag(tag):

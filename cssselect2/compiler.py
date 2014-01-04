@@ -52,6 +52,7 @@ class CompiledSelector(object):
         self.id = None
         self.class_name = None
         self.local_name = None
+        self.lower_local_name = None
         self.namespace = None
 
         node = parsed_selector.parsed_tree
@@ -64,6 +65,7 @@ class CompiledSelector(object):
                 self.class_name = simple_selector.class_name
             elif isinstance(simple_selector, parser.LocalNameSelector):
                 self.local_name = simple_selector.local_name
+                self.lower_local_name = simple_selector.lower_local_name
             elif isinstance(simple_selector, parser.NamespaceSelector):
                 self.namespace = simple_selector.namespace
 
@@ -143,7 +145,9 @@ def _compile_node(selector):
             return test
 
     elif isinstance(selector, parser.LocalNameSelector):
-        return 'el.local_name == %r' % selector.local_name
+        return ('el.local_name == '
+                '(%r if el.is_html_element_in_html_document else %r)'
+                % (selector.lower_local_name, selector.local_name))
 
     elif isinstance(selector, parser.NamespaceSelector):
         return 'el.namespace_url == %r' % selector.namespace
@@ -157,37 +161,41 @@ def _compile_node(selector):
     elif isinstance(selector, parser.AttributeSelector):
         if selector.namespace is not None:
             if selector.namespace:
-                key = '{%s}%s' % (selector.namespace, selector.name)
+                key = '(%r if el.is_html_element_in_html_document else %r)' % (
+                    '{%s}%s' % (selector.namespace, selector.lower_name),
+                    '{%s}%s' % (selector.namespace, selector.name),
+                )
             else:
-                key = selector.name
+                key = ('(%r if el.is_html_element_in_html_document else %r)'
+                       % (selector.lower_name, selector.name))
             value = selector.value
             if selector.operator is None:
-                return 'el.get_attr(%r) is not None' % key
+                return 'el.get_attr(%s) is not None' % key
             elif selector.operator == '=':
-                return 'el.get_attr(%r) == %r' % (key, value)
+                return 'el.get_attr(%s) == %r' % (key, value)
             elif selector.operator == '~=':
                 if len(value.split()) != 1 or value.strip() != value:
                     return '0'
                 else:
-                    return ('%r in split_whitespace(el.get_attr(%r, ""))'
+                    return ('%r in split_whitespace(el.get_attr(%s, ""))'
                             % (value, key))
             elif selector.operator == '|=':
                 return ('next(v == %r or (v is not None and v.startswith(%r))'
-                        '     for v in [el.get_attr(%r)])'
+                        '     for v in [el.get_attr(%s)])'
                         % (value, value + '-', key))
             elif selector.operator == '^=':
                 if value:
-                    return 'el.get_attr(%r, "").startswith(%r)' % (key, value)
+                    return 'el.get_attr(%s, "").startswith(%r)' % (key, value)
                 else:
                     return '0'
             elif selector.operator == '$=':
                 if value:
-                    return 'el.get_attr(%r, "").endswith(%r)' % (key, value)
+                    return 'el.get_attr(%s, "").endswith(%r)' % (key, value)
                 else:
                     return '0'
             elif selector.operator == '*=':
                 if value:
-                    return '%r in el.get_attr(%r, "")' % (value, key)
+                    return '%r in el.get_attr(%s, "")' % (value, key)
                 else:
                     return '0'
             else:
@@ -264,11 +272,10 @@ def _compile_node(selector):
                 if t.type != 'whitespace'
             ]
             if len(tokens) == 1 and tokens[0].type == 'ident':
-                lang = tokens[0].value
+                lang = tokens[0].lower_value
             else:
                 raise SelectorError('Invalid arguments for :lang()')
 
-            # TODO: matching should be case-insensitive
             return ('el.lang == %r or '
                     '(el.lang is not None and el.lang.startswith(%r))'
                     % (lang, lang + '-'))

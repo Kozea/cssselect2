@@ -205,7 +205,7 @@ def parse_qualified_name(tokens, namespaces, is_attribute=False):
         peek = tokens.peek()
         if peek != '|':
             namespace = '' if is_attribute else namespaces.get(None, None)
-            return namespace, first_ident.value
+            return namespace, (first_ident.value, first_ident.lower_value)
         tokens.next()
         namespace = namespaces.get(first_ident.value)
         if namespace is None:
@@ -230,7 +230,7 @@ def parse_qualified_name(tokens, namespaces, is_attribute=False):
     # If we get here, we just consumed '|' and set ``namespace``
     next = tokens.next()
     if next.type == 'ident':
-        return namespace, next.value
+        return namespace, (next.value, next.lower_value)
     elif next == '*' and not is_attribute:
         return namespace, None
     else:
@@ -330,7 +330,7 @@ class LocalNameSelector(object):
     specificity =  0, 0, 1
 
     def __init__(self, local_name):
-        self.local_name = local_name
+        self.local_name, self.lower_local_name = local_name
 
     def __repr__(self):
         return self.local_name
@@ -376,7 +376,7 @@ class AttributeSelector(object):
 
     def __init__(self, namespace, name, operator, value):
         self.namespace = namespace
-        self.name = name
+        self.name, self.lower_name = name
         #: A string like ``=`` or ``~=``, or None for ``[attr]`` selectors
         self.operator = operator
         #: A string, or None for ``[attr]`` selectors

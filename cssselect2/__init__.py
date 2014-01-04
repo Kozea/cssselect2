@@ -14,6 +14,8 @@ from __future__ import unicode_literals
 
 import operator
 
+from webencodings import ascii_lower
+
 from .parser import SelectorError
 from .tree import ElementWrapper
 from .compiler import compile_selector_list, CompiledSelector
@@ -26,7 +28,7 @@ class Matcher(object):
     def __init__(self):
         self.id_selectors = {}
         self.class_selectors = {}
-        self.local_name_selectors = {}
+        self.lower_local_name_selectors = {}
         self.namespace_selectors = {}
         self.other_selectors = []
 
@@ -47,21 +49,20 @@ class Matcher(object):
         if selector.never_matches:
             return
 
+        entry = selector.test, selector.specificity, payload
         if selector.id is not None:
-            selector_list = self.id_selectors.setdefault(selector.id, [])
+            self.id_selectors.setdefault(selector.id, []).append(entry)
         elif selector.class_name is not None:
-            selector_list = self.class_selectors.setdefault(
-                selector.class_name, [])
+            self.class_selectors.setdefault(selector.class_name, []) \
+                .append(entry)
         elif selector.local_name is not None:
-            selector_list = self.local_name_selectors.setdefault(
-                selector.local_name, [])
+            self.lower_local_name_selectors.setdefault(
+                selector.lower_local_name, []).append(entry)
         elif selector.namespace is not None:
-            selector_list = self.namespace_selectors.setdefault(
-                selector.namespace, [])
+            self.namespace_selectors.setdefault(selector.namespace, []) \
+                .append(entry)
         else:
-            selector_list = self.other_selectors
-
-        selector_list.append((selector.test, selector.specificity, payload))
+            self.other_selectors.append(entry)
 
     def match(self, element):
         """
@@ -70,34 +71,37 @@ class Matcher(object):
         :param element:
             An :class:`ElementWrapper`.
         :returns:
-            An iterable of the :obj:`payload` objects associated
+            A list of the :obj:`payload` objects associated
             to selectors that match element,
             in order of lowest to highest :attr:`~CompiledSelector.specificity`,
             and in order of addition with :meth:`add_selector`
             among selectors of equal specificity.
 
         """
-        results = []
-        if element.id is not None:
-            for test, specificity, payload in self.id_selectors.get(element.id, ()):
-                if test(element):
-                    results.append((specificity, payload))
-        for class_name in element.classes:
-            for test, specificity, payload in self.class_selectors.get(class_name, ()):
-                if test(element):
-                    results.append((specificity, payload))
-        for test, specificity, payload in self.local_name_selectors.get(element.local_name, ()):
-            if test(element):
-                results.append((specificity, payload))
-        for test, specificity, payload in self.namespace_selectors.get(element.namespace_url, ()):
-            if test(element):
-                results.append((specificity, payload))
-        for test, specificity, payload in self.other_selectors:
-            if test(element):
-                results.append((specificity, payload))
+        element.is_html_element_in_html_document
+        relevant_selectors = []
 
+        if element.id is not None:
+            relevant_selectors.append(self.id_selectors.get(element.id, []))
+
+        for class_name in element.classes:
+            relevant_selectors.append(self.class_selectors.get(class_name, []))
+
+        relevant_selectors.append(
+            self.lower_local_name_selectors.get(
+                ascii_lower(element.local_name), []))
+        relevant_selectors.append(
+            self.namespace_selectors.get(element.namespace_url, []))
+        relevant_selectors.append(self.other_selectors)
+
+        results = [
+            (specificity, payload)
+            for selector_list in relevant_selectors
+            for test, specificity, payload in selector_list
+            if test(element)
+        ]
         results.sort(key=SORT_KEY)
-        return (payload for _specificity, payload in results)
+        return [payload for _specificity, payload in results]
 
 
 SORT_KEY = operator.itemgetter(0)

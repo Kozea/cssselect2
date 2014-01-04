@@ -79,13 +79,20 @@ def test_valid_selectors(test):
 
 
 def test_select():
-    root = ElementWrapper.from_root(etree.fromstring(HTML_IDS))
+    root = etree.fromstring(HTML_IDS)
 
     def select_ids(selector, html_only):
-        items = list(root.query_all(selector))
+        xml_ids = [element.get_attr('id', 'nil') for element in
+                   ElementWrapper.from_root(root, in_html_document=False)
+                   .query_all(selector)]
+        html_ids = [element.get_attr('id', 'nil') for element in
+                   ElementWrapper.from_root(root, in_html_document=True)
+                   .query_all(selector)]
         if html_only:
-            raise NotImplementedError
-        return [element.get_attr('id', 'nil') for element in items]
+            assert xml_ids == []
+        else:
+            assert xml_ids == html_ids
+        return html_ids
 
     def pcss(main, *selectors, **kwargs):
         html_only = kwargs.pop('html_only', False)
@@ -99,14 +106,14 @@ def test_select():
         'html', 'nil', 'link-href', 'link-nohref', 'nil', 'outer-div']
     assert all_ids[-1:] == ['foobar-span']
     assert pcss('div') == ['outer-div', 'li-div', 'foobar-div']
-#    assert pcss('DIV', html_only=True) == [
-#        'outer-div', 'li-div', 'foobar-div']  # case-insensitive in HTML
+    assert pcss('DIV', html_only=True) == [
+        'outer-div', 'li-div', 'foobar-div']  # case-insensitive in HTML
     assert pcss('div div') == ['li-div']
     assert pcss('div, div div') == ['outer-div', 'li-div', 'foobar-div']
     assert pcss('div , div div') == ['outer-div', 'li-div', 'foobar-div']
     assert pcss('a[name]') == ['name-anchor']
-#    assert pcss('a[NAme]', html_only=True) == [
-#        'name-anchor'] # case-insensitive in HTML:
+    assert pcss('a[NAme]', html_only=True) == [
+        'name-anchor'] # case-insensitive in HTML:
     assert pcss('a[rel]') == ['tag-anchor', 'nofollow-anchor']
     assert pcss('a[rel="tag"]') == ['tag-anchor']
     assert pcss('a[href*="localhost"]') == ['tag-anchor']
@@ -127,11 +134,9 @@ def test_select():
     assert pcss('*[lang|="e"]') == []
     # ... :lang() is not.
     assert pcss(
-        #':lang(EN)', '*:lang(en-US)'
+        ':lang(EN)', '*:lang(en-US)'
         ':lang(En)'
-    #, html_only=True
-    ) == [
-        'second-li', 'li-div']
+    ) == ['second-li', 'li-div']
     assert pcss(':lang(e)'#, html_only=True
     ) == []
     assert pcss('li:nth-child(3)') == ['third-li']
@@ -266,7 +271,7 @@ def test_select_shakespeare():
     assert count('div[class~=dialog]') == 51 # ? Seems right
 
 HTML_IDS = '''
-<html id="html"><head>
+<html id="html" xmlns="http://www.w3.org/1999/xhtml"><head>
   <link id="link-href" href="foo" />
   <link id="link-nohref" />
 </head><body>
