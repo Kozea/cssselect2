@@ -2,6 +2,8 @@
 
 from __future__ import unicode_literals
 
+import xml.etree.ElementTree as etree
+
 from webencodings import ascii_lower
 
 from .compiler import compile_selector_list, split_whitespace
@@ -44,7 +46,7 @@ class ElementWrapper(object):
 
     """
     @classmethod
-    def from_xml_root(cls, root):
+    def from_xml_root(cls, root, content_language=None):
         """Wrap for selector matching the root of an XML or XHTML document.
 
         :param root:
@@ -60,10 +62,10 @@ class ElementWrapper(object):
         .. _scope-contained: http://dev.w3.org/csswg/selectors4/#scope-contained-selectors
 
         """
-        return cls._from_root(root, in_html_document=False)
+        return cls._from_root(root, content_language, in_html_document=False)
 
     @classmethod
-    def from_html_root(cls, root):
+    def from_html_root(cls, root, content_language=None):
         """Same as :meth:`from_xml_root`,
         but for documents parsed with an HTML parser
         like `html5lib <http://html5lib.readthedocs.org/>`_,
@@ -73,17 +75,18 @@ class ElementWrapper(object):
         this makes element attribute names in Selectors case-insensitive.
 
         """
-        return cls._from_root(root, in_html_document=True)
+        return cls._from_root(root, content_language, in_html_document=True)
 
     @classmethod
-    def _from_root(cls, root, in_html_document=True):
+    def _from_root(cls, root, content_language, in_html_document=True):
         if hasattr(root, 'getroot'):
             root = root.getroot()
         return cls(root, parent=None, index=0, previous=None,
-                   in_html_document=in_html_document)
+                   in_html_document=in_html_document,
+                   content_language=content_language)
 
     def __init__(self, etree_element, parent, index, previous,
-                 in_html_document):
+                 in_html_document, content_language=None):
         #: The underlying ElementTree :class:`~xml.etree.ElementTree.Element`
         self.etree_element = etree_element
         #: The parent :class:`ElementWrapper`,
@@ -104,6 +107,8 @@ class ElementWrapper(object):
         #: ``e.etree_siblings[e.index]`` is always ``e.etree_element``.
         self.index = index
         self.in_html_document = in_html_document
+        self.transport_content_language = content_language
+
         # See the get_attr method below.
         self.get_attr = etree_element.get
 
@@ -186,6 +191,29 @@ class ElementWrapper(object):
                 yield element
                 stack.append(element.iter_children())
 
+    @staticmethod
+    def _compile(selectors):
+        return [
+            compiled_selector.test
+            for selector in selectors
+            for compiled_selector in (
+                [selector] if hasattr(selector, 'test')
+                else compile_selector_list(selector)
+            )
+            if compiled_selector.pseudo_element is None
+            and not compiled_selector.never_matches
+        ]
+
+    def matches(self, *selectors):
+        """Return wether this elememt matches any of the given selectors.
+
+        :param selectors:
+            Each given selector is either a :class:`CompiledSelector`,
+            or an argument to :func:`compile_selector_list`.
+
+        """
+        return any(test(self) for test in self._compile(selectors))
+
     def query_all(self, *selectors):
         """
         Return elements, in tree order, that match any of the given selectors.
@@ -201,16 +229,7 @@ class ElementWrapper(object):
             An iterator of newly-created :class:`ElementWrapper` objects.
 
         """
-        tests = [
-            compiled_selector.test
-            for selector in selectors
-            for compiled_selector in (
-                [selector] if hasattr(selector, 'test')
-                else compile_selector_list(selector)
-            )
-            if compiled_selector.pseudo_element is None
-            and not compiled_selector.never_matches
-        ]
+        tests = self._compile(selectors)
         if len(tests) == 1:
             return ifilter(tests[0], self.iter_subtree())
         elif selectors:
@@ -302,12 +321,26 @@ class ElementWrapper(object):
         xml_lang = self.get_attr('{http://www.w3.org/XML/1998/namespace}lang')
         if xml_lang is not None:
             return ascii_lower(xml_lang)
-        if self.namespace_url == 'http://www.w3.org/1999/xhtml':
+        is_html = self.namespace_url == 'http://www.w3.org/1999/xhtml'
+        if is_html:
             lang = self.get_attr('lang')
             if lang is not None:
                 return ascii_lower(lang)
         if self.parent is not None:
             return self.parent.lang
+        # Root elememnt
+        if is_html:
+            content_language = None
+            for meta in etree_iter(self.etree_element,
+                                   '{http://www.w3.org/1999/xhtml}meta'):
+                http_equiv = meta.get('http-equiv', '')
+                if ascii_lower(http_equiv) == 'content-language':
+                    content_language = _parse_content_language(
+                        meta.get('content'))
+            if content_language is not None:
+                return ascii_lower(content_language)
+        # Empty string means unknown
+        return _parse_content_language(self.transport_content_language) or ''
 
     @cached_property
     def in_disabled_fieldset(self):
@@ -340,3 +373,18 @@ def _split_etree_tag(tag):
     else:
         assert tag[0] == '{'
         return tag[1:pos], tag[pos + 1:]
+
+
+if hasattr(etree.Element, 'iter'):
+    def etree_iter(element, tag=None):
+        return element.iter(tag)
+else:
+    def etree_iter(element, tag=None):
+        return element.getiterator(tag)
+
+
+def _parse_content_language(value):
+    if value is not None and ',' not in value:
+        parts = split_whitespace(value)
+        if len(parts) == 1:
+            return parts[0]

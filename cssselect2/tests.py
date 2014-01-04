@@ -78,6 +78,39 @@ def test_valid_selectors(test):
         raise AssertionError(test['name'])
 
 
+def test_lang():
+    doc = etree.fromstring('''
+        <html xmlns="http://www.w3.org/1999/xhtml"></html>
+    ''')
+    assert not ElementWrapper.from_xml_root(doc).matches(':lang(fr)')
+
+    doc = etree.fromstring('''
+        <html xmlns="http://www.w3.org/1999/xhtml">
+            <meta http-equiv="Content-Language" content=" fr \t"/>
+        </html>
+    ''')
+    root = ElementWrapper.from_xml_root(doc, content_language='en')
+    assert root.matches(':lang(fr)')
+
+    doc = etree.fromstring('''
+        <html>
+            <meta http-equiv="Content-Language" content=" fr \t"/>
+        </html>
+    ''')
+    root = ElementWrapper.from_xml_root(doc, content_language='en')
+    assert root.matches(':lang(en)')
+
+    doc = etree.fromstring('<html></html>')
+    root = ElementWrapper.from_xml_root(doc, content_language='en')
+    assert root.matches(':lang(en)')
+
+    root = ElementWrapper.from_xml_root(doc, content_language='en, es')
+    assert not root.matches(':lang(en)')
+
+    root = ElementWrapper.from_xml_root(doc)
+    assert not root.matches(':lang(en)')
+
+
 def test_select():
     root = etree.fromstring(HTML_IDS)
 

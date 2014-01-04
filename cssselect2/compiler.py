@@ -279,8 +279,7 @@ def _compile_node(selector):
             else:
                 raise SelectorError('Invalid arguments for :lang()')
 
-            return ('el.lang == %r or '
-                    '(el.lang is not None and el.lang.startswith(%r))'
+            return ('el.lang == %r or el.lang.startswith(%r)'
                     % (lang, lang + '-'))
         else:
             if selector.name == 'nth-child':
