@@ -21,5 +21,6 @@ setup(
     url='http://packages.python.org/cssselect2/',
     license='BSD',
     packages=['cssselect2'],
+    package_data={'cssselect2': ['tests/*']},
     install_requires=['tinycss2'],
 )

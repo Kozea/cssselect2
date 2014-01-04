@@ -29,7 +29,7 @@ def load_json(filename):
 
 def get_test_document():
     document = etree.parse(resource('content.xhtml'))
-    parent = document.find('.//*[@id="root"]')
+    parent = next(e for e in document.getiterator() if e.get('id') == 'root')
 
     # Setup namespace tests
     any_ns = etree.SubElement(parent, '{http://www.w3.org/1999/xhtml}div');
@@ -87,9 +87,6 @@ def test_valid_selectors(test):
     if 'document' in exclude or 'xhtml' in exclude:
         return
     root = ElementWrapper.from_root(TEST_DOCUMENT)
-    import tinycss2
-    print(tinycss2.parse_component_value_list(test['selector']))
-    print(repr(test['selector']))
     result = [e.id for e in root.query_all(test['selector'])]
     if result != test['expect']:
         print(test['selector'])
