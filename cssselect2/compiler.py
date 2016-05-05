@@ -5,7 +5,10 @@ from __future__ import unicode_literals
 import re
 
 from tinycss2.nth import parse_nth
+from tinycss2 import serialize
 from webencodings import ascii_lower
+
+from lxml import etree
 
 from . import parser
 from .parser import SelectorError
@@ -13,6 +16,7 @@ from .parser import SelectorError
 
 # http://dev.w3.org/csswg/selectors/#whitespace
 split_whitespace = re.compile('[^ \t\r\n\f]+').findall
+tostring = etree.tostring
 
 
 def compile_selector_list(input, namespaces=None):
@@ -45,7 +49,9 @@ class CompiledSelector(object):
         self.never_matches = source == '0'
         self.test = eval(
             'lambda el: ' + source,
-            {'split_whitespace': split_whitespace, 'ascii_lower': ascii_lower},
+            {'split_whitespace': split_whitespace,
+                'ascii_lower': ascii_lower,
+                'tostring': tostring, 're': re},
             {},
         )
         self.specificity = parsed_selector.specificity
@@ -282,7 +288,7 @@ def _compile_node(selector):
             return ('el.lang == %r or '
                     '(el.lang is not None and el.lang.startswith(%r))'
                     % (lang, lang + '-'))
-        else:
+        elif selector.name.startswith('nth-'):
             if selector.name == 'nth-child':
                 count = 'el.index'
             elif selector.name == 'nth-last-child':
@@ -293,8 +299,6 @@ def _compile_node(selector):
             elif selector.name == 'nth-last-of-type':
                 count = ('sum(1 for s in el.etree_siblings[el.index + 1:]'
                          '    if s.tag == el.etree_element.tag)')
-            else:
-                raise SelectorError('Unknown pseudo-class', selector.name)
 
             result = parse_nth(selector.arguments)
             if result is None:
@@ -314,6 +318,14 @@ def _compile_node(selector):
                 return ('next(r == 0 and n >= 0'
                         '     for n, r in [divmod(%s - %i, %i)])'
                         % (count, B, a))
+
+        elif selector.name == 'match':
+            regex = serialize(selector.arguments)
+            return ('re.search("%s", tostring(el.etree_element,'
+                    ' method="text", encoding="unicode"))'
+                    ' is not None' % regex)
+        else:
+            raise SelectorError('Unknown functional pseudo-class', selector.name)
 
     else:
         raise TypeError(type(selector), selector)
