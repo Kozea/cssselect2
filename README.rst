@@ -18,7 +18,6 @@ Quick facts:
 
 * Free software: BSD licensed
 * Compatible with Python 2.6+ and 3.2+
-* Latest documentation `on python.org <http://packages.python.org/cssselect2/>`_
 * Source, issues and pull requests `on Github
   <https://github.com/SimonSapin/cssselect2/>`_
 * Releases `on PyPI <http://pypi.python.org/pypi/cssselect2>`_
