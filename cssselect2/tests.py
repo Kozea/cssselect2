@@ -268,8 +268,77 @@ def test_select_shakespeare():
     assert count('div[class|=dialog]') == 50 # ? Seems right
 #    assert count('div[class!=madeup]') == 243 # ? Seems right
     assert count('div[class~=dialog]') == 51 # ? Seems right
+
+
+def test_select_extensions():
+    document = etree.fromstring(HTML_SHAKESPEARE)
+    body = document.find('.//{http://www.w3.org/1999/xhtml}body')
+    body = ElementWrapper.from_xml_root(body)
+
+    from .extensions import extensions
+    from .parser import parse
+    from .compiler import CompiledSelector
+
+    def count(selector):
+        sels = [CompiledSelector(s) for s in parse(selector, {}, extensions)]
+        return sum(1 for _ in body.query_all(*sels))
+
+    # Data borrowed from http://mootools.net/slickspeed/
+
+    ## Changed from original; probably because I'm only
+    ## searching the body.
+    #assert count('*') == 252
+    assert count('*') == 246
+#    assert count('div:contains(CELIA)') == 26
+    assert count('div:only-child') == 22 # ?
+    assert count('div:nth-child(even)') == 106
+    assert count('div:nth-child(2n)') == 106
+    assert count('div:nth-child(odd)') == 137
+    assert count('div:nth-child(2n+1)') == 137
+    assert count('div:nth-child(n)') == 243
+    assert count('div:last-child') == 53
+    assert count('div:first-child') == 51
+    assert count('div > div') == 242
+    assert count('div + div') == 190
+    assert count('div ~ div') == 190
+    assert count('body') == 1
+    assert count('body div') == 243
+    assert count('div') == 243
+    assert count('div div') == 242
+    assert count('div div div') == 241
+    assert count('div, div, div') == 243
+    assert count('div, a, span') == 243
+    assert count('.dialog') == 51
+    assert count('div.dialog') == 51
+    assert count('div .dialog') == 51
+    assert count('div.character, div.dialog') == 99
+    assert count('div.direction.dialog') == 0
+    assert count('div.dialog.direction') == 0
+    assert count('div.dialog.scene') == 1
+    assert count('div.scene.scene') == 1
+    assert count('div.scene .scene') == 0
+    assert count('div.direction .dialog ') == 0
+    assert count('div .dialog .direction') == 4
+    assert count('div.dialog .dialog .direction') == 4
+    assert count('#speech5') == 1
+    assert count('div#speech5') == 1
+    assert count('div #speech5') == 1
+    assert count('div.scene div.dialog') == 49
+    assert count('div#scene1 div.dialog div') == 142
+    assert count('#scene1 #speech1') == 1
+    assert count('div[class]') == 103
+    assert count('div[class=dialog]') == 50
+    assert count('div[class^=dia]') == 51
+    assert count('div[class$=log]') == 50
+    assert count('div[class*=sce]') == 1
+    assert count('div[class|=dialog]') == 50 # ? Seems right
+#    assert count('div[class!=madeup]') == 243 # ? Seems right
+    assert count('div[class~=dialog]') == 51 # ? Seems right
     assert count('div:match(CELIA)') == 26
     assert count('div:match(^CELIA)') == 21
+    assert count('body:pass(1)') == 1
+    assert count('body:pass(2)') == 1
+    assert count('body:deferred') == 1
 
 HTML_IDS = '''
 <html id="html" xmlns="http://www.w3.org/1999/xhtml"><head>
