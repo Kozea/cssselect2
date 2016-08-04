@@ -127,9 +127,9 @@ def _compile_node(selector, extensions):
             return '(%s) and (%s)' % (right, left)
 
     elif isinstance(selector, parser.CompoundSelector):
-        sub_expressions = filter(lambda x: x != '1',
-                                 [_compile_node(sel, extensions) for sel in
-                                  selector.simple_selectors])
+        sub_expressions = [csel for csel in [
+                           _compile_node(sel, extensions) for sel in
+                           selector.simple_selectors] if csel != '1']
         if len(sub_expressions) == 1:
             test = sub_expressions[0]
         elif '0' in sub_expressions:
