@@ -7,6 +7,8 @@ import re
 def _match(selector):
     "Callback for match pseudoClass."
     regex = serialize(selector.arguments)
+    if regex.startswith('"') and regex.endswith('"'):
+      regex = regex[1:-1]
     return ('(re.search("%s", el.textstring()) is not None)' % regex)
 
 extensions = {'pseudoClass': {'match': {'callback': _match,
