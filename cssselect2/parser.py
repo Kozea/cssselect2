@@ -44,22 +44,26 @@ def parse(input, namespaces=None, extensions=None):
 def parse_selector(tokens, namespaces, extensions):
     result, pseudo_element = parse_compound_selector(tokens, namespaces)
     while 1:
-        has_whitespace, source_line = tokens.skip_whitespace()
+        has_whitespace, source_line_offset = tokens.skip_whitespace()
         while tokens.skip_comment():
-            has_whitespace, source_line = (tokens.skip_whitespace() or
-                                           (has_whitespace, source_line))
+            has_whitespace, source_line_offset = (
+                    tokens.skip_whitespace() or
+                    (has_whitespace, source_line_offset))
         if pseudo_element is not None:
-            return Selector(result, pseudo_element, extensions, source_line)
+            return Selector(result, pseudo_element,
+                            extensions, source_line_offset)
         peek = tokens.peek()
         if peek is None or peek == ',':
-            return Selector(result, pseudo_element, extensions, source_line)
+            return Selector(result, pseudo_element,
+                            extensions, source_line_offset)
         elif peek in ('>', '+', '~'):
             combinator = peek.value
             tokens.next()
         elif has_whitespace:
             combinator = ' '
         else:
-            return Selector(result, pseudo_element, extensions, source_line)
+            return Selector(result, pseudo_element,
+                            extensions, source_line_offset)
         compound, pseudo_element = parse_compound_selector(tokens, namespaces)
         result = CombinedSelector(result, combinator, compound)
 
@@ -288,10 +292,11 @@ class TokenStream(object):
 
 
 class Selector(object):
-    def __init__(self, tree, pseudo_element=None, extensions=None, src_line=0):
+    def __init__(self, tree, pseudo_element=None,
+                 extensions=None, source_line_offset=0):
         self.parsed_tree = tree
         self.extensions = extensions
-        self.source_line = src_line
+        self.source_line_offset = source_line_offset
         if pseudo_element is None:
             self.pseudo_element = pseudo_element
             #: Tuple of 3 integers: http://www.w3.org/TR/selectors/#specificity
