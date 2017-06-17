@@ -16,9 +16,10 @@ import operator
 
 from webencodings import ascii_lower
 
-from .parser import SelectorError
-from .tree import ElementWrapper
-from .compiler import compile_selector_list, CompiledSelector
+# Classes are imported here to expose them at the top level of the module
+from .parser import SelectorError  # noqa
+from .tree import ElementWrapper  # noqa
+from .compiler import compile_selector_list, CompiledSelector  # noqa
 
 
 VERSION = '0.1a0'
@@ -73,7 +74,7 @@ class Matcher(object):
         :returns:
             A list of the :obj:`payload` objects associated
             to selectors that match element,
-            in order of lowest to highest :attr:`~CompiledSelector.specificity`,
+            in order of lowest to highest :attr:`~CompiledSelector.specificity`
             and in order of addition with :meth:`add_selector`
             among selectors of equal specificity.
 

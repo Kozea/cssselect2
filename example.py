@@ -8,6 +8,7 @@ import timeit
 
 import html5lib
 import tinycss2
+
 import cssselect2
 
 
@@ -39,7 +40,8 @@ def parse(url):
 
 
 def match(root, matcher):
-    for element in cssselect2.ElementWrapper.from_html_root(root).iter_subtree():
+    elements = cssselect2.ElementWrapper.from_html_root(root).iter_subtree()
+    for element in elements:
         for _ in matcher.match(element):
             pass
 

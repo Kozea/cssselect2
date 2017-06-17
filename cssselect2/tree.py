@@ -6,8 +6,8 @@ import xml.etree.ElementTree as etree
 
 from webencodings import ascii_lower
 
-from .compiler import compile_selector_list, split_whitespace
 from ._compat import basestring, ifilter
+from .compiler import compile_selector_list, split_whitespace
 
 
 class cached_property(object):
@@ -59,7 +59,8 @@ class ElementWrapper(object):
         :returns:
             A new :class:`ElementWrapper`
 
-        .. _scope-contained: http://dev.w3.org/csswg/selectors4/#scope-contained-selectors
+        .. _scope-contained:
+            http://dev.w3.org/csswg/selectors4/#scope-contained-selectors
 
         """
         return cls._from_root(root, content_language, in_html_document=False)
@@ -200,8 +201,8 @@ class ElementWrapper(object):
                 [selector] if hasattr(selector, 'test')
                 else compile_selector_list(selector)
             )
-            if compiled_selector.pseudo_element is None
-            and not compiled_selector.never_matches
+            if compiled_selector.pseudo_element is None and
+            not compiled_selector.never_matches
         ]
 
     def matches(self, *selectors):
@@ -346,17 +347,14 @@ class ElementWrapper(object):
     def in_disabled_fieldset(self):
         if self.parent is None:
             return False
-        if (
-            self.parent.etree_element.tag ==
-                '{http://www.w3.org/1999/xhtml}fieldset' and
+        if (self.parent.etree_element.tag == (
+                '{http://www.w3.org/1999/xhtml}fieldset') and
             self.parent.get_attr('disabled') is not None and (
-                self.etree_element.tag !=
-                    '{http://www.w3.org/1999/xhtml}legend'
-                or any(s.etree_element.tag ==
-                       '{http://www.w3.org/1999/xhtml}legend'
-                       for s in self.iter_previous_siblings())
-            )
-        ):
+                self.etree_element.tag != (
+                    '{http://www.w3.org/1999/xhtml}legend') or
+                any(s.etree_element.tag == (
+                    '{http://www.w3.org/1999/xhtml}legend')
+                    for s in self.iter_previous_siblings()))):
             return True
         return self.parent.in_disabled_fieldset
 
