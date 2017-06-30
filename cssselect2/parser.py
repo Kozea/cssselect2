@@ -69,7 +69,8 @@ def parse_compound_selector(tokens, namespaces):
             break
         simple_selectors.append(simple_selector)
 
-    if simple_selectors or type_selectors is not None:
+    if (simple_selectors or type_selectors is not None or
+            pseudo_element is not None):
         return CompoundSelector(simple_selectors), pseudo_element
     else:
         peek = tokens.peek()

@@ -46,7 +46,7 @@ class ElementWrapper(object):
 
     """
     @classmethod
-    def from_xml_root(cls, root, content_language=None):
+    def from_xml_root(cls, root, content_language=None, base_url=None):
         """Wrap for selector matching the root of an XML or XHTML document.
 
         :param root:
@@ -63,10 +63,11 @@ class ElementWrapper(object):
             http://dev.w3.org/csswg/selectors4/#scope-contained-selectors
 
         """
-        return cls._from_root(root, content_language, in_html_document=False)
+        return cls._from_root(
+            root, content_language, in_html_document=False, base_url=base_url)
 
     @classmethod
-    def from_html_root(cls, root, content_language=None):
+    def from_html_root(cls, root, content_language=None, base_url=None):
         """Same as :meth:`from_xml_root`,
         but for documents parsed with an HTML parser
         like `html5lib <http://html5lib.readthedocs.org/>`_,
@@ -76,18 +77,20 @@ class ElementWrapper(object):
         this makes element attribute names in Selectors case-insensitive.
 
         """
-        return cls._from_root(root, content_language, in_html_document=True)
+        return cls._from_root(
+            root, content_language, in_html_document=True, base_url=base_url)
 
     @classmethod
-    def _from_root(cls, root, content_language, in_html_document=True):
+    def _from_root(cls, root, content_language, in_html_document=True,
+                   base_url=None):
         if hasattr(root, 'getroot'):
             root = root.getroot()
         return cls(root, parent=None, index=0, previous=None,
                    in_html_document=in_html_document,
-                   content_language=content_language)
+                   content_language=content_language, base_url=base_url)
 
     def __init__(self, etree_element, parent, index, previous,
-                 in_html_document, content_language=None):
+                 in_html_document, content_language=None, base_url=None):
         #: The underlying ElementTree :class:`~xml.etree.ElementTree.Element`
         self.etree_element = etree_element
         #: The parent :class:`ElementWrapper`,
@@ -110,8 +113,19 @@ class ElementWrapper(object):
         self.in_html_document = in_html_document
         self.transport_content_language = content_language
 
-        # See the get_attr method below.
-        self.get_attr = etree_element.get
+        self.sourceline = None  # TODO: Fix that
+        if base_url is not None:
+            self.base_url = base_url
+        elif parent is not None:
+            self.base_url = parent.base_url
+        else:
+            self.base_url = None
+        self.tag = etree_element.tag
+        self.text = etree_element.text
+        self.tail = etree_element.tail
+
+        # See the get method below.
+        self.get = etree_element.get
 
     def __eq__(self, other):
         return (type(self) == type(other) and
@@ -122,6 +136,10 @@ class ElementWrapper(object):
 
     def __hash__(self):
         return hash((type(self), self.etree_element))
+
+    def __iter__(self):
+        for element in self.iter_children():
+            yield element
 
     def iter_ancestors(self):
         """Return an iterator of existing :class:`ElementWrapper` objects
@@ -179,7 +197,7 @@ class ElementWrapper(object):
 
         .. code-block:: python
 
-            for element in ElementWrapper.from_root(root_etree_element).iter():
+            for element in ElementWrapper.from_root(root_etree).iter_subtree():
                 ...
 
         """
@@ -287,7 +305,7 @@ class ElementWrapper(object):
     # On instances, this is overridden by an instance attribute
     # that *is* the bound `get` method of the ElementTree element.
     # This avoids the runtime cost of a function call.
-    def get_attr(self, name, default=None):
+    def get(self, name, default=None):
         """
         Return the value of an attribute.
 
@@ -308,23 +326,23 @@ class ElementWrapper(object):
     @cached_property
     def id(self):
         """The ID of this element, as a string."""
-        return self.get_attr('id')
+        return self.get('id')
 
     @cached_property
     def classes(self):
         """The classes of this element, as a :class:`set` of strings."""
-        return set(split_whitespace(self.get_attr('class', '')))
+        return set(split_whitespace(self.get('class', '')))
 
     @cached_property
     def lang(self):
         """The language of this element, as a string."""
         # http://whatwg.org/C#language
-        xml_lang = self.get_attr('{http://www.w3.org/XML/1998/namespace}lang')
+        xml_lang = self.get('{http://www.w3.org/XML/1998/namespace}lang')
         if xml_lang is not None:
             return ascii_lower(xml_lang)
         is_html = self.namespace_url == 'http://www.w3.org/1999/xhtml'
         if is_html:
-            lang = self.get_attr('lang')
+            lang = self.get('lang')
             if lang is not None:
                 return ascii_lower(lang)
         if self.parent is not None:
@@ -349,7 +367,7 @@ class ElementWrapper(object):
             return False
         if (self.parent.etree_element.tag == (
                 '{http://www.w3.org/1999/xhtml}fieldset') and
-            self.parent.get_attr('disabled') is not None and (
+            self.parent.get('disabled') is not None and (
                 self.etree_element.tag != (
                     '{http://www.w3.org/1999/xhtml}legend') or
                 any(s.etree_element.tag == (
