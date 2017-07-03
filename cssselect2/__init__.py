@@ -36,6 +36,7 @@ class Matcher(object):
 
     def add_selector(self, selector, payload):
         """
+        Add a selector and its payload to the matcher.
 
         :param selector:
             A :class:`CompiledSelector` object.

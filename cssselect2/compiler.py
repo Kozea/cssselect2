@@ -170,32 +170,35 @@ def _compile_node(selector):
                        % (selector.lower_name, selector.name))
             value = selector.value
             if selector.operator is None:
-                return 'el.get(%s) is not None' % key
+                return 'el.etree_element.get(%s) is not None' % key
             elif selector.operator == '=':
-                return 'el.get(%s) == %r' % (key, value)
+                return 'el.etree_element.get(%s) == %r' % (key, value)
             elif selector.operator == '~=':
                 if len(value.split()) != 1 or value.strip() != value:
                     return '0'
                 else:
-                    return ('%r in split_whitespace(el.get(%s, ""))'
-                            % (value, key))
+                    return (
+                        '%r in split_whitespace(el.etree_element.get(%s, ""))'
+                        % (value, key))
             elif selector.operator == '|=':
                 return ('next(v == %r or (v is not None and v.startswith(%r))'
-                        '     for v in [el.get(%s)])'
+                        '     for v in [el.etree_element.get(%s)])'
                         % (value, value + '-', key))
             elif selector.operator == '^=':
                 if value:
-                    return 'el.get(%s, "").startswith(%r)' % (key, value)
+                    return 'el.etree_element.get(%s, "").startswith(%r)' % (
+                        key, value)
                 else:
                     return '0'
             elif selector.operator == '$=':
                 if value:
-                    return 'el.get(%s, "").endswith(%r)' % (key, value)
+                    return 'el.etree_element.get(%s, "").endswith(%r)' % (
+                        key, value)
                 else:
                     return '0'
             elif selector.operator == '*=':
                 if value:
-                    return '%r in el.get(%s, "")' % (value, key)
+                    return '%r in el.etree_element.get(%s, "")' % (value, key)
                 else:
                     return '0'
             else:
@@ -206,14 +209,14 @@ def _compile_node(selector):
 
     elif isinstance(selector, parser.PseudoClassSelector):
         if selector.name == 'link':
-            return ('%s and el.get("href") is not None'
+            return ('%s and el.etree_element.get("href") is not None'
                     % html_tag_eq('a', 'area', 'link'))
         elif selector.name == 'enabled':
             return (
-                '(%s and el.get("disabled") is None'
+                '(%s and el.etree_element.get("disabled") is None'
                 ' and not el.in_disabled_fieldset) or'
-                '(%s and el.get("disabled") is None) or '
-                '(%s and el.get("href") is not None)'
+                '(%s and el.etree_element.get("disabled") is None) or '
+                '(%s and el.etree_element.get("href") is not None)'
                 % (
                     html_tag_eq('button', 'input', 'select', 'textarea',
                                 'option'),
@@ -223,9 +226,9 @@ def _compile_node(selector):
             )
         elif selector.name == 'disabled':
             return (
-                '(%s and (el.get("disabled") is not None'
+                '(%s and (el.etree_element.get("disabled") is not None'
                 ' or el.in_disabled_fieldset)) or'
-                '(%s and el.get("disabled") is not None)' % (
+                '(%s and el.etree_element.get("disabled") is not None)' % (
                     html_tag_eq('button', 'input', 'select', 'textarea',
                                 'option'),
                     html_tag_eq('optgroup', 'menuitem', 'fieldset'),
@@ -233,10 +236,10 @@ def _compile_node(selector):
             )
         elif selector.name == 'checked':
             return (
-                '(%s and el.get("checked") is not None and'
-                ' ascii_lower(el.get("type", "")) '
+                '(%s and el.etree_element.get("checked") is not None and'
+                ' ascii_lower(el.etree_element.get("type", "")) '
                 ' in ("checkbox", "radio"))'
-                'or (%s and el.get("selected") is not None)'
+                'or (%s and el.etree_element.get("selected") is not None)'
                 % (
                     html_tag_eq('input', 'menuitem'),
                     html_tag_eq('option'),
