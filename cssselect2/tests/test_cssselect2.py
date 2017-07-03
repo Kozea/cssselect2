@@ -114,9 +114,9 @@ def test_select():
     root = etree.fromstring(HTML_IDS)
 
     def select_ids(selector, html_only):
-        xml_ids = [element.get('id', 'nil') for element in
+        xml_ids = [element.etree_element.get('id', 'nil') for element in
                    ElementWrapper.from_xml_root(root).query_all(selector)]
-        html_ids = [element.get('id', 'nil') for element in
+        html_ids = [element.etree_element.get('id', 'nil') for element in
                     ElementWrapper.from_html_root(root).query_all(selector)]
         if html_only:
             assert xml_ids == []

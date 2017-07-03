@@ -326,5 +326,5 @@ def html_tag_eq(*local_names):
         return '(el.etree_element.tag == %r)' % (
             '{http://www.w3.org/1999/xhtml}' + local_names[0])
     else:
-        return '(el.etree_element.tag in (%r))' % ', '.join(
+        return '(el.etree_element.tag in (%s))' % ', '.join(
             repr('{http://www.w3.org/1999/xhtml}' + n) for n in local_names)
