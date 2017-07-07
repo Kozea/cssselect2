@@ -46,7 +46,7 @@ class ElementWrapper(object):
 
     """
     @classmethod
-    def from_xml_root(cls, root, content_language=None, base_url=None):
+    def from_xml_root(cls, root, content_language=None):
         """Wrap for selector matching the root of an XML or XHTML document.
 
         :param root:
@@ -64,10 +64,10 @@ class ElementWrapper(object):
 
         """
         return cls._from_root(
-            root, content_language, in_html_document=False, base_url=base_url)
+            root, content_language, in_html_document=False)
 
     @classmethod
-    def from_html_root(cls, root, content_language=None, base_url=None):
+    def from_html_root(cls, root, content_language=None):
         """Same as :meth:`from_xml_root`,
         but for documents parsed with an HTML parser
         like `html5lib <http://html5lib.readthedocs.org/>`_,
@@ -78,19 +78,18 @@ class ElementWrapper(object):
 
         """
         return cls._from_root(
-            root, content_language, in_html_document=True, base_url=base_url)
+            root, content_language, in_html_document=True)
 
     @classmethod
-    def _from_root(cls, root, content_language, in_html_document=True,
-                   base_url=None):
+    def _from_root(cls, root, content_language, in_html_document=True):
         if hasattr(root, 'getroot'):
             root = root.getroot()
         return cls(root, parent=None, index=0, previous=None,
                    in_html_document=in_html_document,
-                   content_language=content_language, base_url=base_url)
+                   content_language=content_language)
 
     def __init__(self, etree_element, parent, index, previous,
-                 in_html_document, content_language=None, base_url=None):
+                 in_html_document, content_language=None):
         #: The underlying ElementTree :class:`~xml.etree.ElementTree.Element`
         self.etree_element = etree_element
         #: The parent :class:`ElementWrapper`,
@@ -112,13 +111,6 @@ class ElementWrapper(object):
         self.index = index
         self.in_html_document = in_html_document
         self.transport_content_language = content_language
-
-        if base_url is not None:
-            self.base_url = base_url
-        elif parent is not None:
-            self.base_url = parent.base_url
-        else:
-            self.base_url = None
 
     def __eq__(self, other):
         return (type(self) == type(other) and
