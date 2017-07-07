@@ -22,7 +22,7 @@ from .tree import ElementWrapper  # noqa
 from .compiler import compile_selector_list, CompiledSelector  # noqa
 
 
-VERSION = '0.1a0'
+VERSION = '0.1'
 
 
 class Matcher(object):
