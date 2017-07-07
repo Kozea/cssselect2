@@ -6,8 +6,8 @@ import xml.etree.ElementTree as etree
 
 from webencodings import ascii_lower
 
-from .compiler import compile_selector_list, split_whitespace
 from ._compat import basestring, ifilter
+from .compiler import compile_selector_list, split_whitespace
 
 
 class cached_property(object):
@@ -59,10 +59,12 @@ class ElementWrapper(object):
         :returns:
             A new :class:`ElementWrapper`
 
-        .. _scope-contained: http://dev.w3.org/csswg/selectors4/#scope-contained-selectors
+        .. _scope-contained:
+            http://dev.w3.org/csswg/selectors4/#scope-contained-selectors
 
         """
-        return cls._from_root(root, content_language, in_html_document=False)
+        return cls._from_root(
+            root, content_language, in_html_document=False)
 
     @classmethod
     def from_html_root(cls, root, content_language=None):
@@ -75,7 +77,8 @@ class ElementWrapper(object):
         this makes element attribute names in Selectors case-insensitive.
 
         """
-        return cls._from_root(root, content_language, in_html_document=True)
+        return cls._from_root(
+            root, content_language, in_html_document=True)
 
     @classmethod
     def _from_root(cls, root, content_language, in_html_document=True):
@@ -109,9 +112,6 @@ class ElementWrapper(object):
         self.in_html_document = in_html_document
         self.transport_content_language = content_language
 
-        # See the get_attr method below.
-        self.get_attr = etree_element.get
-
     def __eq__(self, other):
         return (type(self) == type(other) and
                 self.etree_element == other.etree_element)
@@ -121,6 +121,10 @@ class ElementWrapper(object):
 
     def __hash__(self):
         return hash((type(self), self.etree_element))
+
+    def __iter__(self):
+        for element in self.iter_children():
+            yield element
 
     def iter_ancestors(self):
         """Return an iterator of existing :class:`ElementWrapper` objects
@@ -178,7 +182,7 @@ class ElementWrapper(object):
 
         .. code-block:: python
 
-            for element in ElementWrapper.from_root(root_etree_element).iter():
+            for element in ElementWrapper.from_root(root_etree).iter_subtree():
                 ...
 
         """
@@ -200,8 +204,8 @@ class ElementWrapper(object):
                 [selector] if hasattr(selector, 'test')
                 else compile_selector_list(selector)
             )
-            if compiled_selector.pseudo_element is None
-            and not compiled_selector.never_matches
+            if compiled_selector.pseudo_element is None and
+            not compiled_selector.never_matches
         ]
 
     def matches(self, *selectors):
@@ -283,47 +287,27 @@ class ElementWrapper(object):
         self.__dict__[str('local_name')] = local_name
         return namespace_url
 
-    # On instances, this is overridden by an instance attribute
-    # that *is* the bound `get` method of the ElementTree element.
-    # This avoids the runtime cost of a function call.
-    def get_attr(self, name, default=None):
-        """
-        Return the value of an attribute.
-
-        :param name:
-            The name of the attribute as a string in ElementTree’s notation:
-            the local name for attributes not in any namespace,
-            ``"{namespace url}local name"`` for other attributes.
-        :returns:
-            The value as a string,
-            or :obj:`default` if the element does not have this attribute.
-
-        Note: this just calls ElementTree’s
-        :meth:`~xml.etree.ElementTree.Element.get` method.
-
-        """
-        return self.etree_element.get(name, default)
-
     @cached_property
     def id(self):
         """The ID of this element, as a string."""
-        return self.get_attr('id')
+        return self.etree_element.get('id')
 
     @cached_property
     def classes(self):
         """The classes of this element, as a :class:`set` of strings."""
-        return set(split_whitespace(self.get_attr('class', '')))
+        return set(split_whitespace(self.etree_element.get('class', '')))
 
     @cached_property
     def lang(self):
         """The language of this element, as a string."""
         # http://whatwg.org/C#language
-        xml_lang = self.get_attr('{http://www.w3.org/XML/1998/namespace}lang')
+        xml_lang = self.etree_element.get(
+            '{http://www.w3.org/XML/1998/namespace}lang')
         if xml_lang is not None:
             return ascii_lower(xml_lang)
         is_html = self.namespace_url == 'http://www.w3.org/1999/xhtml'
         if is_html:
-            lang = self.get_attr('lang')
+            lang = self.etree_element.get('lang')
             if lang is not None:
                 return ascii_lower(lang)
         if self.parent is not None:
@@ -346,17 +330,14 @@ class ElementWrapper(object):
     def in_disabled_fieldset(self):
         if self.parent is None:
             return False
-        if (
-            self.parent.etree_element.tag ==
-                '{http://www.w3.org/1999/xhtml}fieldset' and
-            self.parent.get_attr('disabled') is not None and (
-                self.etree_element.tag !=
-                    '{http://www.w3.org/1999/xhtml}legend'
-                or any(s.etree_element.tag ==
-                       '{http://www.w3.org/1999/xhtml}legend'
-                       for s in self.iter_previous_siblings())
-            )
-        ):
+        if (self.parent.etree_element.tag == (
+                '{http://www.w3.org/1999/xhtml}fieldset') and
+            self.parent.etree_element.get('disabled') is not None and (
+                self.etree_element.tag != (
+                    '{http://www.w3.org/1999/xhtml}legend') or
+                any(s.etree_element.tag == (
+                    '{http://www.w3.org/1999/xhtml}legend')
+                    for s in self.iter_previous_siblings()))):
             return True
         return self.parent.in_disabled_fieldset
 

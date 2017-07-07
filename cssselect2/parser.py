@@ -12,12 +12,9 @@
 
 from __future__ import unicode_literals
 
-import re
-
 from tinycss2 import parse_component_value_list
 
 from ._compat import basestring
-
 
 __all__ = ['parse']
 
@@ -72,7 +69,8 @@ def parse_compound_selector(tokens, namespaces):
             break
         simple_selectors.append(simple_selector)
 
-    if simple_selectors or type_selectors is not None:
+    if (simple_selectors or type_selectors is not None or
+            pseudo_element is not None):
         return CompoundSelector(simple_selectors), pseudo_element
     else:
         peek = tokens.peek()
@@ -135,7 +133,8 @@ def parse_simple_selector(tokens, namespaces, in_negation=False):
                     raise SelectorError(next, 'nested :not()')
                 return parse_negation(next, namespaces), None
             else:
-                return FunctionalPseudoClassSelector(name, next.arguments), None
+                return (
+                    FunctionalPseudoClassSelector(name, next.arguments), None)
         else:
             raise SelectorError(next, 'unexpected %s token.' % next)
     else:
@@ -160,7 +159,8 @@ def parse_negation(negation_token, namespaces):
 
 def parse_attribute_selector(tokens, namespaces):
     tokens.skip_whitespace()
-    qualified_name = parse_qualified_name(tokens, namespaces, is_attribute=True)
+    qualified_name = parse_qualified_name(
+        tokens, namespaces, is_attribute=True)
     if qualified_name is None:
         next = tokens.next()
         raise SelectorError(
@@ -210,7 +210,8 @@ def parse_qualified_name(tokens, namespaces, is_attribute=False):
         namespace = namespaces.get(first_ident.value)
         if namespace is None:
             raise SelectorError(
-                first_ident, 'undefined namespace prefix: ' + first_ident.value)
+                first_ident,
+                'undefined namespace prefix: ' + first_ident.value)
     elif peek == '*':
         next = tokens.next()
         peek = tokens.peek()
@@ -287,7 +288,6 @@ class Selector(object):
             return '%r::%s' % (self.parsed_tree, self.pseudo_element)
 
 
-
 class CombinedSelector(object):
     def __init__(self, left, combinator, right):
         #: Combined or compound selector
@@ -317,8 +317,8 @@ class CompoundSelector(object):
         if self.simple_selectors:
             # zip(*foo) turns [(a1, b1, c1), (a2, b2, c2), ...]
             # into [(a1, a2, ...), (b1, b2, ...), (c1, c2, ...)]
-            return tuple(map(sum, zip(*
-                (sel.specificity for sel in self.simple_selectors))))
+            return tuple(map(sum, zip(
+                *(sel.specificity for sel in self.simple_selectors))))
         else:
             return 0, 0, 0
 
@@ -327,7 +327,7 @@ class CompoundSelector(object):
 
 
 class LocalNameSelector(object):
-    specificity =  0, 0, 1
+    specificity = 0, 0, 1
 
     def __init__(self, local_name):
         self.local_name, self.lower_local_name = local_name
@@ -337,7 +337,7 @@ class LocalNameSelector(object):
 
 
 class NamespaceSelector(object):
-    specificity =  0, 0, 0
+    specificity = 0, 0, 0
 
     def __init__(self, namespace):
         #: The namespace URL as a string,
@@ -352,7 +352,7 @@ class NamespaceSelector(object):
 
 
 class IDSelector(object):
-    specificity =  1, 0, 0
+    specificity = 1, 0, 0
 
     def __init__(self, ident):
         self.ident = ident
@@ -362,7 +362,7 @@ class IDSelector(object):
 
 
 class ClassSelector(object):
-    specificity =  0, 1, 0
+    specificity = 0, 1, 0
 
     def __init__(self, class_name):
         self.class_name = class_name
@@ -372,7 +372,7 @@ class ClassSelector(object):
 
 
 class AttributeSelector(object):
-    specificity =  0, 1, 0
+    specificity = 0, 1, 0
 
     def __init__(self, namespace, name, operator, value):
         self.namespace = namespace
@@ -389,7 +389,7 @@ class AttributeSelector(object):
 
 
 class PseudoClassSelector(object):
-    specificity =  0, 1, 0
+    specificity = 0, 1, 0
 
     def __init__(self, name):
         self.name = name
@@ -399,7 +399,7 @@ class PseudoClassSelector(object):
 
 
 class FunctionalPseudoClassSelector(object):
-    specificity =  0, 1, 0
+    specificity = 0, 1, 0
 
     def __init__(self, name, arguments):
         self.name = name
