@@ -183,9 +183,8 @@ def parse_attribute_selector(tokens, namespaces):
                 next, 'expected attribute value, got %s' % next_type)
         value = next.value
     else:
-        next_type = 'None' if next is None else next.type
         raise SelectorError(
-            next, 'expected attribute selector operator, got %s' % next_type)
+            peek, 'expected attribute selector operator, got %s' % peek)
 
     tokens.skip_whitespace()
     next = tokens.next()
