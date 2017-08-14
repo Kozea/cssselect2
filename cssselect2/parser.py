@@ -5,7 +5,7 @@
 
     A parser for CSS selectors, based on the tinycss tokenizer.
 
-    :copyright: (c) 2012 by Simon Sapin.
+    :copyright: (c) 2012 by Simon Sapin, 2017 by Guillaume Ayoub.
     :license: BSD, see LICENSE for more details.
 
 """
