@@ -177,13 +177,15 @@ def parse_attribute_selector(tokens, namespaces):
         tokens.next()
         tokens.skip_whitespace()
         next = tokens.next()
-        if next.type not in ('ident', 'string'):
+        if next is None or next.type not in ('ident', 'string'):
+            next_type = 'None' if next is None else next.type
             raise SelectorError(
-                next, 'expected attribute value, got %s' % next.type)
+                next, 'expected attribute value, got %s' % next_type)
         value = next.value
     else:
+        next_type = 'None' if next is None else next.type
         raise SelectorError(
-            next, 'expected attribute selector operator, got %s' % next.type)
+            next, 'expected attribute selector operator, got %s' % next_type)
 
     tokens.skip_whitespace()
     next = tokens.next()
