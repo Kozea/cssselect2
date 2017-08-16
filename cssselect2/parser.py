@@ -29,6 +29,7 @@ def parse(input, namespaces=None):
     tokens = TokenStream(input)
     namespaces = namespaces or {}
     yield parse_selector(tokens, namespaces)
+    tokens.skip_whitespace_and_comment()
     while 1:
         next = tokens.next()
         if next is None:
@@ -43,6 +44,8 @@ def parse_selector(tokens, namespaces):
     result, pseudo_element = parse_compound_selector(tokens, namespaces)
     while 1:
         has_whitespace = tokens.skip_whitespace()
+        while tokens.skip_comment():
+            has_whitespace = tokens.skip_whitespace() or has_whitespace
         if pseudo_element is not None:
             return Selector(result, pseudo_element)
         peek = tokens.peek()
@@ -259,15 +262,24 @@ class TokenStream(object):
             self.peeked.append(next(self.tokens, None))
         return self.peeked[-1]
 
-    def skip_whitespace(self):
-        has_whitespace = False
+    def skip(self, skip_types):
+        found = False
         while 1:
             peek = self.peek()
-            if peek is None or peek.type != 'whitespace':
+            if peek is None or peek.type not in skip_types:
                 break
             self.next()
-            has_whitespace = True
-        return has_whitespace
+            found = True
+        return found
+
+    def skip_whitespace(self):
+        return self.skip(['whitespace'])
+
+    def skip_comment(self):
+        return self.skip(['comment'])
+
+    def skip_whitespace_and_comment(self):
+        return self.skip(['comment', 'whitespace'])
 
 
 class Selector(object):
