@@ -2,7 +2,20 @@ cssselect2 changelog
 ====================
 
 
+Version 0.2.0
+-------------
+
+Released on 2017-08-16.
+
+* Fix some selectors for HTML documents with no namespace.
+* Don't crash when the attribute comparator is unknown.
+* Don't crash when there are empty attribute classes.
+* Follow semantic versioning.
+
+
 Version 0.1
 -----------
 
-Not released yet.
+Released on 2017-07-07.
+
+* Initial release.
