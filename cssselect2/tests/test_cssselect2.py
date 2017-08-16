@@ -110,6 +110,14 @@ def test_lang():
     root = ElementWrapper.from_xml_root(doc)
     assert not root.matches(':lang(en)')
 
+    doc = etree.fromstring('<html lang="eN"></html>')
+    root = ElementWrapper.from_html_root(doc)
+    assert root.matches(':lang(en)')
+
+    doc = etree.fromstring('<html lang="eN"></html>')
+    root = ElementWrapper.from_xml_root(doc)
+    assert not root.matches(':lang(en)')
+
 
 def test_select():
     root = etree.fromstring(HTML_IDS)
@@ -227,6 +235,8 @@ def test_select():
     assert pcss(r'[h\a0 ref]', r'[h\]ref]') == []
 
     assert pcss(':link') == [
+        'link-href', 'tag-anchor', 'nofollow-anchor', 'area-href']
+    assert pcss('HTML :link', html_only=True) == [
         'link-href', 'tag-anchor', 'nofollow-anchor', 'area-href']
     assert pcss(':visited') == []
     assert pcss(':enabled') == [

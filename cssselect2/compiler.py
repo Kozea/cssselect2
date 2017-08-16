@@ -145,8 +145,7 @@ def _compile_node(selector):
             return test
 
     elif isinstance(selector, parser.LocalNameSelector):
-        return ('el.local_name == '
-                '(%r if el.is_html_element_in_html_document else %r)'
+        return ('el.local_name == (%r if el.in_html_document else %r)'
                 % (selector.lower_local_name, selector.local_name))
 
     elif isinstance(selector, parser.NamespaceSelector):
@@ -161,12 +160,12 @@ def _compile_node(selector):
     elif isinstance(selector, parser.AttributeSelector):
         if selector.namespace is not None:
             if selector.namespace:
-                key = '(%r if el.is_html_element_in_html_document else %r)' % (
+                key = '(%r if el.in_html_document else %r)' % (
                     '{%s}%s' % (selector.namespace, selector.lower_name),
                     '{%s}%s' % (selector.namespace, selector.name),
                 )
             else:
-                key = ('(%r if el.is_html_element_in_html_document else %r)'
+                key = ('(%r if el.in_html_document else %r)'
                        % (selector.lower_name, selector.name))
             value = selector.value
             if selector.operator is None:
@@ -323,8 +322,15 @@ def _compile_node(selector):
 
 def html_tag_eq(*local_names):
     if len(local_names) == 1:
-        return '(el.etree_element.tag == %r)' % (
-            '{http://www.w3.org/1999/xhtml}' + local_names[0])
+        return (
+            '((el.local_name == %r) if el.in_html_document else '
+            '(el.etree_element.tag == %r))' % (
+                local_names[0],
+                '{http://www.w3.org/1999/xhtml}' + local_names[0]))
     else:
-        return '(el.etree_element.tag in (%s))' % ', '.join(
-            repr('{http://www.w3.org/1999/xhtml}' + n) for n in local_names)
+        return (
+            '((el.local_name in (%s)) if el.in_html_document else '
+            '(el.etree_element.tag in (%s)))' % (
+                ', '.join(repr(n) for n in local_names),
+                ', '.join(repr('{http://www.w3.org/1999/xhtml}' + n)
+                          for n in local_names)))

@@ -63,8 +63,7 @@ class ElementWrapper(object):
             http://dev.w3.org/csswg/selectors4/#scope-contained-selectors
 
         """
-        return cls._from_root(
-            root, content_language, in_html_document=False)
+        return cls._from_root(root, content_language, in_html_document=False)
 
     @classmethod
     def from_html_root(cls, root, content_language=None):
@@ -77,8 +76,7 @@ class ElementWrapper(object):
         this makes element attribute names in Selectors case-insensitive.
 
         """
-        return cls._from_root(
-            root, content_language, in_html_document=True)
+        return cls._from_root(root, content_language, in_html_document=True)
 
     @classmethod
     def _from_root(cls, root, content_language, in_html_document=True):
@@ -305,7 +303,9 @@ class ElementWrapper(object):
             '{http://www.w3.org/XML/1998/namespace}lang')
         if xml_lang is not None:
             return ascii_lower(xml_lang)
-        is_html = self.namespace_url == 'http://www.w3.org/1999/xhtml'
+        is_html = (
+            self.in_html_document or
+            self.namespace_url == 'http://www.w3.org/1999/xhtml')
         if is_html:
             lang = self.etree_element.get('lang')
             if lang is not None:
@@ -340,11 +340,6 @@ class ElementWrapper(object):
                     for s in self.iter_previous_siblings()))):
             return True
         return self.parent.in_disabled_fieldset
-
-    @cached_property
-    def is_html_element_in_html_document(self):
-        return (self.in_html_document and
-                self.namespace_url == 'http://www.w3.org/1999/xhtml')
 
 
 def _split_etree_tag(tag):
