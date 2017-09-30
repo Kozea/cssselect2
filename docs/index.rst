@@ -27,9 +27,12 @@ Here is a classical cssselect2 workflow:
 - wrap the HTML tree in a :meth:`~cssselect2.ElementWrapper` object,
 - find the CSS rules matching each HTML tag, using the matcher and the wrapper.
 
-.. include:: ../example.py
 
-.. module:: tinycss2
+.. code:: python
+
+   .. include:: ../example.py
+
+.. module:: cssselect2
 .. autofunction:: Matcher
 .. autofunction:: compile_selector_list
 .. autofunction:: CompiledSelector
