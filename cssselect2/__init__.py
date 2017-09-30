@@ -17,9 +17,9 @@ import operator
 from webencodings import ascii_lower
 
 # Classes are imported here to expose them at the top level of the module
+from .compiler import compile_selector_list, CompiledSelector  # noqa
 from .parser import SelectorError  # noqa
 from .tree import ElementWrapper  # noqa
-from .compiler import compile_selector_list, CompiledSelector  # noqa
 
 
 VERSION = '0.2.0'
