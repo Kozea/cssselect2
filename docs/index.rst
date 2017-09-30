@@ -31,11 +31,10 @@ Here is a classical cssselect2 workflow:
 .. literalinclude:: ../example.py
 
 .. module:: cssselect2
-.. autofunction:: Matcher
+.. autoclass:: Matcher
 .. autofunction:: compile_selector_list
-.. autofunction:: CompiledSelector
-.. autofunction:: ElementWrapper
-.. autofunction:: SelectorError
+.. autoclass:: ElementWrapper
+.. autoclass:: SelectorError
 
 
 .. include:: ../CHANGES

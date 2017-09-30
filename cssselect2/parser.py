@@ -243,7 +243,7 @@ def parse_qualified_name(tokens, namespaces, is_attribute=False):
 
 
 class SelectorError(ValueError):
-    """A specialized ValueError for invalid selectors."""
+    """A specialized ``ValueError`` for invalid selectors."""
 
 
 class TokenStream(object):

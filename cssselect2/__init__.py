@@ -17,7 +17,7 @@ import operator
 from webencodings import ascii_lower
 
 # Classes are imported here to expose them at the top level of the module
-from .compiler import compile_selector_list, CompiledSelector  # noqa
+from .compiler import compile_selector_list  # noqa
 from .parser import SelectorError  # noqa
 from .tree import ElementWrapper  # noqa
 
@@ -26,6 +26,7 @@ VERSION = '0.2.0'
 
 
 class Matcher(object):
+    """A CSS selectors storage that can match against HTML elements."""
     def __init__(self):
         self.id_selectors = {}
         self.class_selectors = {}
