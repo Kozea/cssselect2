@@ -38,7 +38,4 @@ Here is a classical cssselect2 workflow:
 .. autofunction:: SelectorError
 
 
-Changelog
-=========
-
 .. include:: ../CHANGES
