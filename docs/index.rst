@@ -28,9 +28,7 @@ Here is a classical cssselect2 workflow:
 - find the CSS rules matching each HTML tag, using the matcher and the wrapper.
 
 
-.. code:: python
-
-   .. include:: ../example.py
+.. literalinclude:: ../example.py
 
 .. module:: cssselect2
 .. autofunction:: Matcher
