@@ -1,12 +1,3 @@
-"""
-
-In this cssselect2 example:
-- we parse a CSS stylesheet,
-- we parse HTML document and
-- we find the CSS rules matching each HTML tag.
-
-"""
-
 from xml.etree import ElementTree
 
 import cssselect2
