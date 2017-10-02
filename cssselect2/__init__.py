@@ -22,7 +22,7 @@ from .parser import SelectorError  # noqa
 from .tree import ElementWrapper  # noqa
 
 
-VERSION = '0.2.0'
+VERSION = '0.2.1'
 
 
 class Matcher(object):
