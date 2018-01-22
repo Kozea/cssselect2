@@ -19,7 +19,7 @@ from ._compat import basestring
 __all__ = ['parse']
 
 
-def parse(input, namespaces=None):
+def parse(input, namespaces=None, extensions=None):
     """
     :param input:
         A :term:`string`, or an iterable of :term:`component values`.
@@ -28,36 +28,40 @@ def parse(input, namespaces=None):
         input = parse_component_value_list(input)
     tokens = TokenStream(input)
     namespaces = namespaces or {}
-    yield parse_selector(tokens, namespaces)
+    extensions = extensions or {}
+    yield parse_selector(tokens, namespaces, extensions)
     tokens.skip_whitespace_and_comment()
     while 1:
         next = tokens.next()
         if next is None:
             return
         elif next == ',':
-            yield parse_selector(tokens, namespaces)
+            yield parse_selector(tokens, namespaces, extensions)
         else:
             raise SelectorError(next, 'unpexpected %s token.' % next.type)
 
 
-def parse_selector(tokens, namespaces):
+def parse_selector(tokens, namespaces, extensions):
     result, pseudo_element = parse_compound_selector(tokens, namespaces)
     while 1:
         has_whitespace = tokens.skip_whitespace()
         while tokens.skip_comment():
             has_whitespace = tokens.skip_whitespace() or has_whitespace
         if pseudo_element is not None:
-            return Selector(result, pseudo_element)
+            return Selector(result, pseudo_element,
+                            extensions, tokens.source_line_offset)
         peek = tokens.peek()
         if peek is None or peek == ',':
-            return Selector(result, pseudo_element)
+            return Selector(result, pseudo_element,
+                            extensions, tokens.source_line_offset)
         elif peek in ('>', '+', '~'):
             combinator = peek.value
             tokens.next()
         elif has_whitespace:
             combinator = ' '
         else:
-            return Selector(result, pseudo_element)
+            return Selector(result, pseudo_element,
+                            extensions, tokens.source_line_offset)
         compound, pseudo_element = parse_compound_selector(tokens, namespaces)
         result = CombinedSelector(result, combinator, compound)
 
@@ -250,6 +254,7 @@ class TokenStream(object):
     def __init__(self, tokens):
         self.tokens = iter(tokens)
         self.peeked = []  # In reversed order
+        self.source_line_offset = 0
 
     def next(self):
         if self.peeked:
@@ -270,6 +275,8 @@ class TokenStream(object):
                 break
             self.next()
             found = True
+            if u'\n' in peek.value:
+                self.source_line_offset += 1
         return found
 
     def skip_whitespace(self):
@@ -283,8 +290,11 @@ class TokenStream(object):
 
 
 class Selector(object):
-    def __init__(self, tree, pseudo_element=None):
+    def __init__(self, tree, pseudo_element=None,
+                 extensions=None, source_line_offset=0):
         self.parsed_tree = tree
+        self.extensions = extensions
+        self.source_line_offset = source_line_offset
         if pseudo_element is None:
             self.pseudo_element = pseudo_element
             #: Tuple of 3 integers: http://www.w3.org/TR/selectors/#specificity

@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 import re
 
 from tinycss2.nth import parse_nth
+
 from webencodings import ascii_lower
 
 from . import parser
@@ -19,8 +20,8 @@ def compile_selector_list(input, namespaces=None):
 
     :param input:
         A :term:`tinycss2:string`,
-        or an iterable of tinycss2 :term:`tinycss2:component values` such as
-        the :attr:`~tinycss2.ast.QualifiedRule.predule` of a style rule.
+        or an iterable of tinycss2 :term:`tinycss2:component values`
+        such as the :attr:`~tinycss2.ast.QualifiedRule.prelude` of a css rule.
     :param namespaces:
         A optional dictionary of all `namespace prefix declarations
         <http://www.w3.org/TR/selectors/#nsdecl>`_ in scope for this selector.
@@ -40,11 +41,17 @@ def compile_selector_list(input, namespaces=None):
 
 class CompiledSelector(object):
     def __init__(self, parsed_selector):
-        source = _compile_node(parsed_selector.parsed_tree)
+        node = parsed_selector.parsed_tree
+        source = _compile_node(node, parsed_selector.extensions)
         self.never_matches = source == '0'
+        eval_mods = {'split_whitespace': split_whitespace,
+                     'ascii_lower': ascii_lower}
+        for ext_type in parsed_selector.extensions.values():
+            for ext in ext_type.values():
+                if 'modules' in ext:
+                    eval_mods.update(ext['modules'])
         self.test = eval(
-            'lambda el: ' + source,
-            {'split_whitespace': split_whitespace, 'ascii_lower': ascii_lower},
+            'lambda el: ' + source, eval_mods,
             {},
         )
         self.specificity = parsed_selector.specificity
@@ -55,7 +62,6 @@ class CompiledSelector(object):
         self.lower_local_name = None
         self.namespace = None
 
-        node = parsed_selector.parsed_tree
         if isinstance(node, parser.CombinedSelector):
             node = node.right
         for simple_selector in node.simple_selectors:
@@ -70,7 +76,7 @@ class CompiledSelector(object):
                 self.namespace = simple_selector.namespace
 
 
-def _compile_node(selector):
+def _compile_node(selector, extensions):
     """Return a boolean expression, as a Python source string.
 
     When evaluated in a context where the `el` variable is an
@@ -85,7 +91,7 @@ def _compile_node(selector):
     # 1 and 0 are used for True and False to avoid global lookups.
 
     if isinstance(selector, parser.CombinedSelector):
-        left_inside = _compile_node(selector.left)
+        left_inside = _compile_node(selector.left, extensions)
         if left_inside == '0':
             return '0'  # 0 and x == 0
         elif left_inside == '1':
@@ -112,7 +118,7 @@ def _compile_node(selector):
         else:
             raise SelectorError('Unknown combinator', selector.combinator)
 
-        right = _compile_node(selector.right)
+        right = _compile_node(selector.right, extensions)
         if right == '0':
             return '0'  # 0 and x == 0
         elif right == '1':
@@ -122,9 +128,9 @@ def _compile_node(selector):
             return '(%s) and (%s)' % (right, left)
 
     elif isinstance(selector, parser.CompoundSelector):
-        sub_expressions = [
-            expr for expr in map(_compile_node, selector.simple_selectors)
-            if expr != '1']
+        sub_expressions = [csel for csel in [
+                           _compile_node(sel, extensions) for sel in
+                           selector.simple_selectors] if csel != '1']
         if len(sub_expressions) == 1:
             test = sub_expressions[0]
         elif '0' in sub_expressions:
@@ -267,6 +273,10 @@ def _compile_node(selector):
                     '    for i, s in enumerate(el.etree_siblings))')
         elif selector.name == 'empty':
             return 'not (el.etree_children or el.etree_element.text)'
+        elif ('pseudoClass' in extensions and
+              selector.name in extensions['pseudoClass']):
+            callback = extensions['pseudoClass'][selector.name]['callback']
+            return callback(selector)
         else:
             raise SelectorError('Unknown pseudo-class', selector.name)
 
@@ -283,7 +293,7 @@ def _compile_node(selector):
 
             return ('el.lang == %r or el.lang.startswith(%r)'
                     % (lang, lang + '-'))
-        else:
+        elif selector.name.startswith('nth-'):
             if selector.name == 'nth-child':
                 count = 'el.index'
             elif selector.name == 'nth-last-child':
@@ -294,8 +304,6 @@ def _compile_node(selector):
             elif selector.name == 'nth-last-of-type':
                 count = ('sum(1 for s in el.etree_siblings[el.index + 1:]'
                          '    if s.tag == el.etree_element.tag)')
-            else:
-                raise SelectorError('Unknown pseudo-class', selector.name)
 
             result = parse_nth(selector.arguments)
             if result is None:
@@ -315,6 +323,14 @@ def _compile_node(selector):
                 return ('next(r == 0 and n >= 0'
                         '     for n, r in [divmod(%s - %i, %i)])'
                         % (count, B, a))
+
+        elif ('pseudoClass' in extensions and
+              selector.name in extensions['pseudoClass']):
+            callback = extensions['pseudoClass'][selector.name]['callback']
+            return callback(selector)
+        else:
+            raise SelectorError('Unknown functional pseudo-class',
+                                selector.name)
 
     else:
         raise TypeError(type(selector), selector)
