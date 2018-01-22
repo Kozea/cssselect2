@@ -10,13 +10,13 @@
 
 """
 
-from . import compile_selector_list, ElementWrapper, SelectorError
-
 import json
 import os.path
 import xml.etree.ElementTree as etree
 
 import pytest
+
+from . import ElementWrapper, SelectorError, compile_selector_list
 
 
 def resource(filename):
@@ -111,7 +111,7 @@ def test_select():
     assert pcss('div , div div') == ['outer-div', 'li-div', 'foobar-div']
     assert pcss('a[name]') == ['name-anchor']
     assert pcss('a[NAme]', html_only=True) == [
-        'name-anchor'] # case-insensitive in HTML:
+        'name-anchor']  # case-insensitive in HTML:
     assert pcss('a[rel]') == ['tag-anchor', 'nofollow-anchor']
     assert pcss('a[rel="tag"]') == ['tag-anchor']
     assert pcss('a[href*="localhost"]') == ['tag-anchor']
@@ -135,7 +135,8 @@ def test_select():
         ':lang(EN)', '*:lang(en-US)'
         ':lang(En)'
     ) == ['second-li', 'li-div']
-    assert pcss(':lang(e)'#, html_only=True
+    assert pcss(
+        ':lang(e)'  # , html_only=True
     ) == []
     assert pcss('li:nth-child(3)') == ['third-li']
     assert pcss('li:nth-child(10)') == []
@@ -219,12 +220,12 @@ def test_select_shakespeare():
 
     # Data borrowed from http://mootools.net/slickspeed/
 
-    ## Changed from original; probably because I'm only
-    ## searching the body.
-    #assert count('*') == 252
+    #  # Changed from original; probably because I'm only
+    #  # searching the body.
+#    assert count('*') == 252
     assert count('*') == 246
 #    assert count('div:contains(CELIA)') == 26
-    assert count('div:only-child') == 22 # ?
+    assert count('div:only-child') == 22  # ?
     assert count('div:nth-child(even)') == 106
     assert count('div:nth-child(2n)') == 106
     assert count('div:nth-child(odd)') == 137
@@ -265,9 +266,9 @@ def test_select_shakespeare():
     assert count('div[class^=dia]') == 51
     assert count('div[class$=log]') == 50
     assert count('div[class*=sce]') == 1
-    assert count('div[class|=dialog]') == 50 # ? Seems right
-#    assert count('div[class!=madeup]') == 243 # ? Seems right
-    assert count('div[class~=dialog]') == 51 # ? Seems right
+    assert count('div[class|=dialog]') == 50  # ? Seems right
+#    assert count('div[class!=madeup]') == 243  # ? Seems right
+    assert count('div[class~=dialog]') == 51  # ? Seems right
 
 
 def test_select_extensions():
@@ -285,12 +286,12 @@ def test_select_extensions():
 
     # Data borrowed from http://mootools.net/slickspeed/
 
-    ## Changed from original; probably because I'm only
-    ## searching the body.
-    #assert count('*') == 252
+    # # Changed from original; probably because I'm only
+    # # searching the body.
+#    assert count('*') == 252
     assert count('*') == 246
 #    assert count('div:contains(CELIA)') == 26
-    assert count('div:only-child') == 22 # ?
+    assert count('div:only-child') == 22  # ?
     assert count('div:nth-child(even)') == 106
     assert count('div:nth-child(2n)') == 106
     assert count('div:nth-child(odd)') == 137
@@ -331,14 +332,15 @@ def test_select_extensions():
     assert count('div[class^=dia]') == 51
     assert count('div[class$=log]') == 50
     assert count('div[class*=sce]') == 1
-    assert count('div[class|=dialog]') == 50 # ? Seems right
-#    assert count('div[class!=madeup]') == 243 # ? Seems right
-    assert count('div[class~=dialog]') == 51 # ? Seems right
+    assert count('div[class|=dialog]') == 50  # ? Seems right
+#    assert count('div[class!=madeup]') == 243  # ? Seems right
+    assert count('div[class~=dialog]') == 51  # ? Seems right
     assert count('div:match(CELIA)') == 26
     assert count('div:match(^CELIA)') == 21
     assert count('body:pass(1)') == 1
     assert count('body:pass(2)') == 1
     assert count('body:deferred') == 1
+
 
 HTML_IDS = '''
 <html id="html" xmlns="http://www.w3.org/1999/xhtml"><head>
@@ -389,7 +391,7 @@ c"></li>
 <div id="foobar-div" foobar="ab bc
 cde"><span id="foobar-span"></span></div>
 </body></html>
-'''
+'''  # noqa
 
 
 HTML_SHAKESPEARE = '''
@@ -701,4 +703,4 @@ HTML_SHAKESPEARE = '''
 </div>
 </body>
 </html>
-'''
+'''  # noqa

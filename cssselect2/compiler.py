@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 import re
 
 from tinycss2.nth import parse_nth
+
 from webencodings import ascii_lower
 
 from . import parser
