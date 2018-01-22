@@ -1,9 +1,10 @@
 # coding: utf8
 
 import re
-from . import extensions as ex
 
 from tinycss2 import serialize
+
+from . import extensions as ex
 
 
 def _match(selector):
