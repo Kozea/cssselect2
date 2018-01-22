@@ -44,18 +44,16 @@ def parse(input, namespaces=None, extensions=None):
 def parse_selector(tokens, namespaces, extensions):
     result, pseudo_element = parse_compound_selector(tokens, namespaces)
     while 1:
-        has_whitespace, source_line_offset = tokens.skip_whitespace()
+        has_whitespace = tokens.skip_whitespace()
         while tokens.skip_comment():
-            has_whitespace, source_line_offset = (
-                    tokens.skip_whitespace() or
-                    (has_whitespace, source_line_offset))
+            has_whitespace = tokens.skip_whitespace() or has_whitespace
         if pseudo_element is not None:
             return Selector(result, pseudo_element,
-                            extensions, source_line_offset)
+                            extensions, tokens.source_line_offset)
         peek = tokens.peek()
         if peek is None or peek == ',':
             return Selector(result, pseudo_element,
-                            extensions, source_line_offset)
+                            extensions, tokens.source_line_offset)
         elif peek in ('>', '+', '~'):
             combinator = peek.value
             tokens.next()
@@ -63,7 +61,7 @@ def parse_selector(tokens, namespaces, extensions):
             combinator = ' '
         else:
             return Selector(result, pseudo_element,
-                            extensions, source_line_offset)
+                            extensions, tokens.source_line_offset)
         compound, pseudo_element = parse_compound_selector(tokens, namespaces)
         result = CombinedSelector(result, combinator, compound)
 
@@ -256,7 +254,7 @@ class TokenStream(object):
     def __init__(self, tokens):
         self.tokens = iter(tokens)
         self.peeked = []  # In reversed order
-        self.lines = 0
+        self.source_line_offset = 0
 
     def next(self):
         if self.peeked:
@@ -278,8 +276,8 @@ class TokenStream(object):
             self.next()
             found = True
             if u'\n' in peek.value:
-                self.lines += 1
-        return found, self.lines
+                self.source_line_offset += 1
+        return found
 
     def skip_whitespace(self):
         return self.skip(['whitespace'])
