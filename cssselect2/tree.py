@@ -341,15 +341,6 @@ class ElementWrapper(object):
             return True
         return self.parent.in_disabled_fieldset
 
-    def textstring(self):
-        """Returns a text string of all text for this subtree"""
-        strval = u''
-        strval += (self.etree_element.text or u'')
-        for elem in self.iter_children():
-            strval += elem.textstring()
-        strval += (self.etree_element.tail or u'')
-        return strval
-
 
 def _split_etree_tag(tag):
     pos = tag.rfind('}')
