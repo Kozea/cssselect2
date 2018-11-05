@@ -344,10 +344,9 @@ class ElementWrapper(object):
 
 def _split_etree_tag(tag):
     pos = tag.rfind('}')
-    if pos == -1:
+    if pos == -1 or (len(tag) > 0 and tag[0] != '{'):
         return '', tag
     else:
-        assert tag[0] == '{'
         return tag[1:pos], tag[pos + 1:]
 
 
