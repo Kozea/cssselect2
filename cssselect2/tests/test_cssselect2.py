@@ -15,7 +15,6 @@ import os.path
 import xml.etree.ElementTree as etree
 
 import pytest
-
 from cssselect2 import ElementWrapper, SelectorError, compile_selector_list
 
 

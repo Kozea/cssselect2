@@ -21,7 +21,6 @@ from .compiler import compile_selector_list  # noqa
 from .parser import SelectorError  # noqa
 from .tree import ElementWrapper  # noqa
 
-
 VERSION = '0.2.1'
 
 
