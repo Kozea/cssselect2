@@ -31,6 +31,7 @@ class Matcher(object):
         self.class_selectors = {}
         self.lower_local_name_selectors = {}
         self.namespace_selectors = {}
+        self.lang_attr_selectors = []
         self.other_selectors = []
         self.order = 0
 
@@ -68,6 +69,8 @@ class Matcher(object):
         elif selector.namespace is not None:
             self.namespace_selectors.setdefault(selector.namespace, []) \
                 .append(entry)
+        elif selector.requires_lang_attr:
+            self.lang_attr_selectors.append(entry)
         else:
             self.other_selectors.append(entry)
 
@@ -98,6 +101,10 @@ class Matcher(object):
                 ascii_lower(element.local_name), []))
         relevant_selectors.append(
             self.namespace_selectors.get(element.namespace_url, []))
+
+        if 'lang' in element.etree_element.attrib:
+            relevant_selectors.append(self.lang_attr_selectors)
+
         relevant_selectors.append(self.other_selectors)
 
         results = [
