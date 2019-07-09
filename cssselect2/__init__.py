@@ -102,7 +102,7 @@ class Matcher(object):
         relevant_selectors.append(
             self.namespace_selectors.get(element.namespace_url, []))
 
-        if "lang" in element.el.etree_element.attrib:
+        if 'lang' in element.etree_element.attrib:
             relevant_selectors.append(self.lang_attr_selectors)
 
         relevant_selectors.append(self.other_selectors)
