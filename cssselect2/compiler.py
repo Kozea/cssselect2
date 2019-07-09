@@ -54,6 +54,7 @@ class CompiledSelector(object):
         self.local_name = None
         self.lower_local_name = None
         self.namespace = None
+        self.requires_lang_attr = False
 
         node = parsed_selector.parsed_tree
         if isinstance(node, parser.CombinedSelector):
@@ -68,6 +69,9 @@ class CompiledSelector(object):
                 self.lower_local_name = simple_selector.lower_local_name
             elif isinstance(simple_selector, parser.NamespaceSelector):
                 self.namespace = simple_selector.namespace
+            elif isinstance(simple_selector, parser.AttributeSelector) and \
+                    simple_selector.name == "lang":
+                self.requires_lang_attr = True
 
 
 def _compile_node(selector):
@@ -169,7 +173,7 @@ def _compile_node(selector):
                        % (selector.lower_name, selector.name))
             value = selector.value
             if selector.operator is None:
-                return 'el.etree_element.get(%s) is not None' % key
+                return '%s in el.etree_element.attrib' % key
             elif selector.operator == '=':
                 return 'el.etree_element.get(%s) == %r' % (key, value)
             elif selector.operator == '~=':
