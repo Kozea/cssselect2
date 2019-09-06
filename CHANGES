@@ -2,6 +2,14 @@ cssselect2 changelog
 ====================
 
 
+Version 0.2.2
+-------------
+
+Released on 2019-09-06.
+
+* Optimize lang attribute selectors.
+
+
 Version 0.2.1
 -------------
 
