@@ -22,7 +22,7 @@ setup(
     author_email='simon.sapin@exyr.org',
     description='CSS selectors for Python ElementTree',
     long_description=README,
-    url='http://packages.python.org/cssselect2/',
+    url='https://cssselect2.readthedocs.io/',
     license='BSD',
     packages=['cssselect2'],
     package_data={'cssselect2': ['tests/*']},
