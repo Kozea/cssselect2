@@ -26,7 +26,7 @@ setup(
     license='BSD',
     packages=['cssselect2'],
     package_data={'cssselect2': ['tests/*']},
-    install_requires=['tinycss2'],
+    install_requires=['tinycss2', 'webencodings'],
     setup_requires=pytest_runner,
     test_suite='cssselect2.tests',
     tests_require=[
