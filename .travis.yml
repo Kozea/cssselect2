@@ -1,6 +1,5 @@
 language: python
 sudo: false
-env: HOMEBREW_NO_AUTO_UPDATE=1
 
 git:
   submodules: false
@@ -17,7 +16,9 @@ matrix:
       python: 3.7
     - os: osx
       language: generic
-      env: PYTHON_VERSION=3
+      env:
+        - PYTHON_VERSION=3
+        - HOMEBREW_NO_AUTO_UPDATE=1
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew pin numpy gdal postgis; fi
