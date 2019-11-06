@@ -16,12 +16,7 @@ matrix:
       python: 3.7
     - os: osx
       language: generic
-      rvm: 2.4.3
       env: PYTHON_VERSION=3
-
-before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew pin numpy gdal postgis; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew upgrade python; fi
 
 install:
   - pip$PYTHON_VERSION install --upgrade -e.[test]
