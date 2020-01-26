@@ -22,7 +22,7 @@ def resource(filename):
 
 
 def load_json(filename):
-    return json.load(open(resource(filename)))
+    return json.load(open(resource(filename), encoding='utf-8'))
 
 
 def get_test_document():
