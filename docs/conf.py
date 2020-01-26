@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # cssselect2 documentation build configuration file.
 
@@ -31,7 +30,8 @@ copyright = '2012-2017, Simon Sapin'
 #
 # The full version, including alpha/beta/rc tags.
 release = re.search("VERSION = '([^']+)'", codecs.open(
-    path.join(path.dirname(path.dirname(__file__)), 'cssselect2', '__init__.py'),
+    path.join(
+        path.dirname(path.dirname(__file__)), 'cssselect2', '__init__.py'),
     encoding='utf-8',
 ).read().strip()).group(1)
 
@@ -75,6 +75,5 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'py2': ('http://docs.python.org/2', None),
     'py3': ('http://docs.python.org/3', None),
     'webencodings': ('http://pythonhosted.org/webencodings/', None)}

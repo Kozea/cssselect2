@@ -1,12 +1,5 @@
-# coding: utf8
-
-from __future__ import unicode_literals
-
-import xml.etree.ElementTree as etree
-
 from webencodings import ascii_lower
 
-from ._compat import basestring, ifilter
 from .compiler import compile_selector_list, split_whitespace
 
 
@@ -233,7 +226,7 @@ class ElementWrapper(object):
         """
         tests = self._compile(selectors)
         if len(tests) == 1:
-            return ifilter(tests[0], self.iter_subtree())
+            return filter(tests[0], self.iter_subtree())
         elif selectors:
             return (
                 element
@@ -269,7 +262,7 @@ class ElementWrapper(object):
         are not included.
 
         """
-        return [c for c in self.etree_element if isinstance(c.tag, basestring)]
+        return [c for c in self.etree_element if isinstance(c.tag, str)]
 
     @cached_property
     def local_name(self):
@@ -315,8 +308,9 @@ class ElementWrapper(object):
         # Root elememnt
         if is_html:
             content_language = None
-            for meta in etree_iter(self.etree_element,
-                                   '{http://www.w3.org/1999/xhtml}meta'):
+            iterator = self.etree_element.iter(
+                '{http://www.w3.org/1999/xhtml}meta')
+            for meta in iterator:
                 http_equiv = meta.get('http-equiv', '')
                 if ascii_lower(http_equiv) == 'content-language':
                     content_language = _parse_content_language(
@@ -349,14 +343,6 @@ def _split_etree_tag(tag):
     else:
         assert tag[0] == '{'
         return tag[1:pos], tag[pos + 1:]
-
-
-if hasattr(etree.Element, 'iter'):
-    def etree_iter(element, tag=None):
-        return element.iter(tag)
-else:
-    def etree_iter(element, tag=None):
-        return element.getiterator(tag)
 
 
 def _parse_content_language(value):

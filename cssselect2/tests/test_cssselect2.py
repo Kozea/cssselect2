@@ -1,4 +1,3 @@
-# coding: utf8
 """
     cssselect2.tests
     ----------------
@@ -28,12 +27,7 @@ def load_json(filename):
 
 def get_test_document():
     document = etree.parse(resource('content.xhtml'))
-    if hasattr(document, 'iter'):
-        iterator = document.iter()
-    else:
-        iterator = document.getiterator()
-
-    parent = next(e for e in iterator if e.get('id') == 'root')
+    parent = next(e for e in document.iter() if e.get('id') == 'root')
 
     # Setup namespace tests
     for id in ('any-namespace', 'no-namespace'):

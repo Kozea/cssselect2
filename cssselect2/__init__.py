@@ -1,4 +1,3 @@
-# coding: utf8
 """
     cssselect2
     ----------
@@ -9,8 +8,6 @@
     :license: BSD, see LICENSE for more details.
 
 """
-
-from __future__ import unicode_literals
 
 import operator
 
@@ -36,8 +33,7 @@ class Matcher(object):
         self.order = 0
 
     def add_selector(self, selector, payload):
-        """
-        Add a selector and its payload to the matcher.
+        """Add a selector and its payload to the matcher.
 
         :param selector:
             A :class:`CompiledSelector` object.
@@ -75,8 +71,7 @@ class Matcher(object):
             self.other_selectors.append(entry)
 
     def match(self, element):
-        """
-        Match selectors against the given element.
+        """Match selectors against the given element.
 
         :param element:
             An :class:`ElementWrapper`.

@@ -1,25 +1,29 @@
 language: python
 sudo: false
+env: PYTHON=python3
 
 git:
   submodules: false
 
 matrix:
   include:
-    - os: linux
-      python: 2.7
-    - os: linux
+    - dist: xenial
       python: 3.5
-    - os: linux
+    - dist: xenial
       python: 3.6
     - dist: xenial
       python: 3.7
+    - dist: bionic
+      python: 3.8
     - os: osx
       language: generic
-      env: PYTHON_VERSION=3
+    - os: windows
+      language: shell
+      env: PYTHON=/c/Python38/python
 
 install:
-  - pip$PYTHON_VERSION install --upgrade -e.[test]
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then choco install -y python; fi
+  - $PYTHON -m pip install --upgrade -e.[test]
 
 script:
-  - python$PYTHON_VERSION setup.py test
+  - $PYTHON setup.py test

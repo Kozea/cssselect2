@@ -20,7 +20,7 @@ cssselect.
 Quick facts:
 
 * Free software: BSD licensed
-* Compatible with Python 2.7+ and 3.3+
+* Compatible with Python 3.5+
 * Latest documentation: http://cssselect2.readthedocs.io/
 * Source, issues and pull requests `on Github
   <https://github.com/Kozea/cssselect2/>`_

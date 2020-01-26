@@ -1,30 +1,27 @@
-# coding: utf8
 """
     cssselect2.parser
     -----------------
 
-    A parser for CSS selectors, based on the tinycss tokenizer.
+    A parser for CSS selectors, based on the tinycss2 tokenizer.
 
     :copyright: (c) 2012 by Simon Sapin, 2017 by Guillaume Ayoub.
     :license: BSD, see LICENSE for more details.
 
 """
 
-from __future__ import unicode_literals
-
 from tinycss2 import parse_component_value_list
-
-from ._compat import basestring
 
 __all__ = ['parse']
 
 
 def parse(input, namespaces=None):
-    """
+    """Yield tinycss2 selectors found in given ``input``.
+
     :param input:
         A :term:`string`, or an iterable of :term:`component values`.
+
     """
-    if isinstance(input, basestring):
+    if isinstance(input, str):
         input = parse_component_value_list(input)
     tokens = TokenStream(input)
     namespaces = namespaces or {}
@@ -197,8 +194,11 @@ def parse_attribute_selector(tokens, namespaces):
 
 
 def parse_qualified_name(tokens, namespaces, is_attribute=False):
-    """Returns None (not a qualified name) or (ns, local),
-    in which None is a wildcard. The empty string for ns is "no namespace".
+    """Return ``(namespace, local)`` for given tokens.
+
+    Can also return ``None`` for a wildcard.
+
+    The empty string for ``namespace`` means "no namespace".
 
     """
     peek = tokens.peek()
