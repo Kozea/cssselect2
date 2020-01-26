@@ -18,7 +18,7 @@ def parse(input, namespaces=None):
     """Yield tinycss2 selectors found in given ``input``.
 
     :param input:
-        A :term:`string`, or an iterable of :term:`component values`.
+        A string, or an iterable of tinycss2 component values.
 
     """
     if isinstance(input, str):

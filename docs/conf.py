@@ -2,10 +2,7 @@
 #
 # cssselect2 documentation build configuration file.
 
-import codecs
-import re
-from os import path
-
+from pathlib import Path
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
@@ -22,18 +19,14 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'cssselect2'
-copyright = '2012-2017, Simon Sapin'
+copyright = '2012-2020, Simon Sapin and contributors'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = re.search("VERSION = '([^']+)'", codecs.open(
-    path.join(
-        path.dirname(path.dirname(__file__)), 'cssselect2', '__init__.py'),
-    encoding='utf-8',
-).read().strip()).group(1)
+release = (Path(__file__).parent.parent / 'cssselect2' / 'VERSION').read_text()
 
 # The short X.Y version.
 version = '.'.join(release.split('.')[:2])
@@ -52,7 +45,7 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = []
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'cssselect2doc'

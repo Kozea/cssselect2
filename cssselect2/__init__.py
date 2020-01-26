@@ -10,6 +10,7 @@
 """
 
 import operator
+from pathlib import Path
 
 from webencodings import ascii_lower
 
@@ -18,7 +19,7 @@ from .compiler import compile_selector_list  # noqa
 from .parser import SelectorError  # noqa
 from .tree import ElementWrapper  # noqa
 
-VERSION = '0.2.2'
+VERSION = __version__ = (Path(__file__).parent / 'VERSION').read_text().strip()
 
 
 class Matcher(object):

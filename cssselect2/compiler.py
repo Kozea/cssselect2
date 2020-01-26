@@ -14,8 +14,7 @@ def compile_selector_list(input, namespaces=None):
     """Compile a (comma-separated) list of selectors.
 
     :param input:
-        A :term:`tinycss2:string`,
-        or an iterable of tinycss2 :term:`tinycss2:component values` such as
+        A string, or an iterable of tinycss2 component values such as
         the :attr:`~tinycss2.ast.QualifiedRule.predule` of a style rule.
     :param namespaces:
         A optional dictionary of all `namespace prefix declarations

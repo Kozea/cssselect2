@@ -60,10 +60,9 @@ class ElementWrapper(object):
 
     @classmethod
     def from_html_root(cls, root, content_language=None):
-        """Same as :meth:`from_xml_root`,
-        but for documents parsed with an HTML parser
-        like `html5lib <http://html5lib.readthedocs.org/>`_,
-        which should be the case of documents with the ``text/html`` MIME type.
+        """Same as :meth:`from_xml_root`, but for documents parsed with an HTML parser
+        like `html5lib`_, which should be the case of documents with the
+        ``text/html`` MIME type.
 
         Compared to :meth:`from_xml_root`,
         this makes element attribute names in Selectors case-insensitive.
@@ -92,7 +91,7 @@ class ElementWrapper(object):
         if parent is not None:
             #: The :attr:`parent`’s children
             #: as a list of
-            #: ElementTree :class:`~xml.etree.ElementTree.Element`s.
+            #: ElementTree :class:`~xml.etree.ElementTree.Element`\ s.
             #: For the root (which has no parent)
             self.etree_siblings = parent.etree_children
         else:
