@@ -31,6 +31,9 @@
 	{"name": "Invalid pseudo-element",       "selector": ":::before"},
 	{"name": "Undeclared namespace",         "selector": "ns|div"},
 	{"name": "Undeclared namespace",         "selector": ":not(ns|div)"},
+	{"name": "Only simple selector in :not", "selector": ":not()"},
+	{"name": "Only simple selector in :not", "selector": ":not(a b)"},
+	{"name": "Nested :not",                  "selector": ":not(:not(*))"},
 	{"name": "Invalid namespace",            "selector": "^|div"},
 	{"name": "Invalid namespace",            "selector": "$|div"}
 ]
