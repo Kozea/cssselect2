@@ -1,16 +1,14 @@
 """
-    cssselect2
-    ----------
+cssselect2
+==========
 
-    CSS selectors for ElementTree.
-
-    :copyright: (c) 2012 by Simon Sapin, 2017 by Guillaume Ayoub.
-    :license: BSD, see LICENSE for more details.
+cssselect2 is a straightforward implementation of CSS3 Selectors for markup
+documents (HTML, XML, etc.) that can be read by ElementTree-like parsers
+(including cElementTree, lxml, html5lib, etc.)
 
 """
 
 import operator
-from pathlib import Path
 
 from webencodings import ascii_lower
 
@@ -19,7 +17,7 @@ from .compiler import compile_selector_list  # noqa
 from .parser import SelectorError  # noqa
 from .tree import ElementWrapper  # noqa
 
-VERSION = __version__ = (Path(__file__).parent / 'VERSION').read_text().strip()
+VERSION = __version__ = '0.3.0'
 
 
 class Matcher(object):

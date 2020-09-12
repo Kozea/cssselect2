@@ -3,7 +3,6 @@ from xml.etree import ElementTree
 import cssselect2
 import tinycss2
 
-
 # Parse CSS and add rules to the matcher
 
 matcher = cssselect2.Matcher()

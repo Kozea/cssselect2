@@ -61,7 +61,7 @@ class ElementWrapper(object):
     @classmethod
     def from_html_root(cls, root, content_language=None):
         """Same as :meth:`from_xml_root`, but for documents parsed with an HTML parser
-        like `html5lib`_, which should be the case of documents with the
+        like html5lib, which should be the case of documents with the
         ``text/html`` MIME type.
 
         Compared to :meth:`from_xml_root`,

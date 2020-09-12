@@ -1,8 +1,6 @@
-#!/usr/bin/env python3
-#
 # cssselect2 documentation build configuration file.
 
-from pathlib import Path
+import cssselect2
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
@@ -19,14 +17,14 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'cssselect2'
-copyright = '2012-2020, Simon Sapin and contributors'
+copyright = 'Simon Sapin and contributors'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = (Path(__file__).parent.parent / 'cssselect2' / 'VERSION').read_text()
+release = cssselect2.__version__
 
 # The short X.Y version.
 version = '.'.join(release.split('.')[:2])

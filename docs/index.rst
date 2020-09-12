@@ -1,8 +1,11 @@
+cssselect2
+==========
+
 .. include:: ../README.rst
 
 
 Installation
-============
+------------
 
 Installing cssselect2 with pip_ should Just Work::
 
@@ -17,7 +20,7 @@ Python implementation, although they’re only tested on CPython.
 
 
 Basic Example
-=============
+-------------
 
 Here is a classical cssselect2 workflow:
 
@@ -29,6 +32,10 @@ Here is a classical cssselect2 workflow:
 
 .. literalinclude:: example.py
 
+
+API
+---
+
 .. module:: cssselect2
 .. autoclass:: Matcher
    :members:
@@ -37,5 +44,4 @@ Here is a classical cssselect2 workflow:
    :members:
 .. autoclass:: SelectorError
 
-
-.. include:: ../CHANGES
+.. include:: changelog.rst
