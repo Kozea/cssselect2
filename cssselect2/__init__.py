@@ -35,11 +35,11 @@ class Matcher(object):
         """Add a selector and its payload to the matcher.
 
         :param selector:
-            A :class:`CompiledSelector` object.
+            A :class:`compiler.CompiledSelector` object.
         :param payload:
             Some data associated to the selector,
-            such as :class:`declarations <~tinycss2.ast.Declaration>`
-            parsed from the :attr:`~tinycss2.ast.QualifiedRule.content`
+            such as :class:`declarations <tinycss2.ast.Declaration>`
+            parsed from the :attr:`tinycss2.ast.QualifiedRule.content`
             of a style rule.
             It can be any Python object,
             and will be returned as-is by :meth:`match`.
@@ -75,11 +75,11 @@ class Matcher(object):
         :param element:
             An :class:`ElementWrapper`.
         :returns:
-            A list of the :obj:`payload` objects associated
-            to selectors that match element,
-            in order of lowest to highest :attr:`~CompiledSelector.specificity`
-            and in order of addition with :meth:`add_selector`
-            among selectors of equal specificity.
+            A list of the payload objects associated to selectors that match
+            element, in order of lowest to highest
+            :attr:`compiler.CompiledSelector` specificity and in order of
+            addition with :meth:`add_selector` among selectors of equal
+            specificity.
 
         """
         relevant_selectors = []
