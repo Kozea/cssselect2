@@ -7,8 +7,8 @@ Version 0.3.0
 
 Released on 2020-03-16.
 
-* Drop Python2 support
-* Improve packaging and testing
+* Drop Python2 support.
+* Improve packaging and testing.
 
 
 Version 0.2.2
