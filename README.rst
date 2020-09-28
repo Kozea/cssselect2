@@ -26,3 +26,7 @@ Quick facts:
   <https://github.com/Kozea/cssselect2/>`_
 * Releases `on PyPI <http://pypi.python.org/pypi/cssselect2>`_
 * Install with ``pip install cssselect2``
+
+cssselect2 has been created and developed by Kozea (https://kozea.fr/).
+Professional support, maintenance and community management is provided by
+CourtBouillon (https://www.courtbouillon.org/).
