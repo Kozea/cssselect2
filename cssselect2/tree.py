@@ -25,7 +25,7 @@ class cached_property(object):
 
 class ElementWrapper(object):
     """
-    A wrapper for an ElementTree :class:`~xml.etree.ElementTree.Element`
+    A wrapper for an ElementTree :class:`xml.etree.ElementTree.Element`
     for Selector matching.
 
     This class should not be instanciated directly.
@@ -35,7 +35,7 @@ class ElementWrapper(object):
     using methods such as :meth:`iter_children` and :meth:`iter_subtree`.
 
     :class:`ElementWrapper` objects compare equal
-    if their underlying :class:`~xml.etree.ElementTree.Element` do.
+    if their underlying :class:`xml.etree.ElementTree.Element` do.
 
     """
     @classmethod
@@ -43,17 +43,16 @@ class ElementWrapper(object):
         """Wrap for selector matching the root of an XML or XHTML document.
 
         :param root:
-            An ElementTree :class:`~xml.etree.ElementTree.Element`
+            An ElementTree :class:`xml.etree.ElementTree.Element`
             for the root element of a document.
             If the given element is not the root,
             selector matching will behave is if it were.
-            In other words, selectors will be `scope-contained`_
+            In other words, selectors will be not be `scoped`_
             to the subtree rooted at that element.
         :returns:
             A new :class:`ElementWrapper`
 
-        .. _scope-contained:
-            http://dev.w3.org/csswg/selectors4/#scope-contained-selectors
+        .. _scoped: https://drafts.csswg.org/selectors-4/#scoping
 
         """
         return cls._from_root(root, content_language, in_html_document=False)
@@ -61,7 +60,7 @@ class ElementWrapper(object):
     @classmethod
     def from_html_root(cls, root, content_language=None):
         """Same as :meth:`from_xml_root`, but for documents parsed with an HTML parser
-        like `html5lib`_, which should be the case of documents with the
+        like html5lib, which should be the case of documents with the
         ``text/html`` MIME type.
 
         Compared to :meth:`from_xml_root`,
@@ -80,7 +79,7 @@ class ElementWrapper(object):
 
     def __init__(self, etree_element, parent, index, previous,
                  in_html_document, content_language=None):
-        #: The underlying ElementTree :class:`~xml.etree.ElementTree.Element`
+        #: The underlying ElementTree :class:`xml.etree.ElementTree.Element`
         self.etree_element = etree_element
         #: The parent :class:`ElementWrapper`,
         #: or :obj:`None` for the root element.
@@ -91,7 +90,7 @@ class ElementWrapper(object):
         if parent is not None:
             #: The :attr:`parent`’s children
             #: as a list of
-            #: ElementTree :class:`~xml.etree.ElementTree.Element`\ s.
+            #: ElementTree :class:`xml.etree.ElementTree.Element`\ s.
             #: For the root (which has no parent)
             self.etree_siblings = parent.etree_children
         else:
@@ -202,7 +201,7 @@ class ElementWrapper(object):
         """Return wether this elememt matches any of the given selectors.
 
         :param selectors:
-            Each given selector is either a :class:`CompiledSelector`,
+            Each given selector is either a :class:`compiler.CompiledSelector`,
             or an argument to :func:`compile_selector_list`.
 
         """
@@ -212,12 +211,12 @@ class ElementWrapper(object):
         """
         Return elements, in tree order, that match any of the given selectors.
 
-        Selectors are `scope-filtered`_ to the subtree rooted at this element.
+        Selectors are `scoped`_ to the subtree rooted at this element.
 
-        .. _scope-filtered: http://dev.w3.org/csswg/selectors4/#scope-filtered
+        .. _scoped: https://drafts.csswg.org/selectors-4/#scoping
 
         :param selectors:
-            Each given selector is either a :class:`CompiledSelector`,
+            Each given selector is either a :class:`compiler.CompiledSelector`,
             or an argument to :func:`compile_selector_list`.
         :returns:
             An iterator of newly-created :class:`ElementWrapper` objects.
@@ -240,7 +239,7 @@ class ElementWrapper(object):
         that matches any of the given selectors.
 
         :param selectors:
-            Each given selector is either a :class:`CompiledSelector`,
+            Each given selector is either a :class:`compiler.CompiledSelector`,
             or an argument to :func:`compile_selector_list`.
         :returns:
             A newly-created :class:`ElementWrapper` object,
@@ -252,12 +251,12 @@ class ElementWrapper(object):
     @cached_property
     def etree_children(self):
         """This element’s children,
-        as a list of ElementTree :class:`~xml.etree.ElementTree.Element`.
+        as a list of ElementTree :class:`xml.etree.ElementTree.Element`.
 
         Other ElementTree nodes such as
-        :class:`comments <~xml.etree.ElementTree.Comment>` and
-        :class:`processing instructions
-        <~xml.etree.ElementTree.ProcessingInstruction>`
+        :func:`comments <xml.etree.ElementTree.Comment>` and
+        :func:`processing instructions
+        <xml.etree.ElementTree.ProcessingInstruction>`
         are not included.
 
         """

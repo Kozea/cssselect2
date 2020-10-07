@@ -15,7 +15,7 @@ def compile_selector_list(input, namespaces=None):
 
     :param input:
         A string, or an iterable of tinycss2 component values such as
-        the :attr:`~tinycss2.ast.QualifiedRule.predule` of a style rule.
+        the :attr:`tinycss2.ast.QualifiedRule.prelude` of a style rule.
     :param namespaces:
         A optional dictionary of all `namespace prefix declarations
         <http://www.w3.org/TR/selectors/#nsdecl>`_ in scope for this selector.
@@ -24,7 +24,7 @@ def compile_selector_list(input, namespaces=None):
         Values are namespace URLs as strings.
         If omitted, assume that no prefix is declared.
     :returns:
-        A list of opaque :class:`CompiledSelector` objects.
+        A list of opaque :class:`compiler.CompiledSelector` objects.
 
     """
     return [
@@ -34,6 +34,7 @@ def compile_selector_list(input, namespaces=None):
 
 
 class CompiledSelector(object):
+    """Abstract representation of a selector."""
     def __init__(self, parsed_selector):
         source = _compile_node(parsed_selector.parsed_tree)
         self.never_matches = source == '0'
@@ -73,7 +74,7 @@ def _compile_node(selector):
     """Return a boolean expression, as a Python source string.
 
     When evaluated in a context where the `el` variable is an
-    :class:`~cssselect2.tree.Element` object,
+    :class:`cssselect2.tree.Element` object,
     tells whether the element is a subject of `selector`.
 
     """

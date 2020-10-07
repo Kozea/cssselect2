@@ -1,11 +1,8 @@
 *.pyc
-*.egg-info
-/.cache
+.cache
 /.coverage
-/.eggs
 /build
 /dist
-/env
-/htmlcov
-/profile
 /docs/_build
+/pytest_cache
+/venv

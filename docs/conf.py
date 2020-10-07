@@ -1,8 +1,6 @@
-#!/usr/bin/env python3
-#
 # cssselect2 documentation build configuration file.
 
-from pathlib import Path
+import cssselect2
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
@@ -19,14 +17,14 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'cssselect2'
-copyright = '2012-2020, Simon Sapin and contributors'
+copyright = 'Simon Sapin and contributors'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = (Path(__file__).parent.parent / 'cssselect2' / 'VERSION').read_text()
+release = cssselect2.__version__
 
 # The short X.Y version.
 version = '.'.join(release.split('.')[:2])
@@ -36,11 +34,15 @@ version = '.'.join(release.split('.')[:2])
 exclude_patterns = ['_build']
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = 'lovelace'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = 'sphinx_rtd_theme'
+
+html_theme_options = {
+    'collapse_navigation': False,
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -54,7 +56,7 @@ htmlhelp_basename = 'cssselect2doc'
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'cssselect2', 'cssselect2 Documentation',
-     ['Simon Sapin'], 1)
+     ['Simon Sapin and contributors'], 1)
 ]
 
 # Grouping the document tree into Texinfo files. List of tuples
@@ -68,5 +70,6 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'py3': ('http://docs.python.org/3', None),
-    'webencodings': ('http://pythonhosted.org/webencodings/', None)}
+    'python': ('https://docs.python.org/', None),
+    'tinycss2': ('https://tinycss2.readthedocs.io/en/stable/', None),
+    'webencodings': ('https://pythonhosted.org/webencodings/', None)}
