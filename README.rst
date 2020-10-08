@@ -8,6 +8,8 @@ documents (HTML, XML, etc.) that can be read by ElementTree-like parsers
 * Changelog: https://github.com/Kozea/cssselect2/releases
 * Code, issues, tests: https://github.com/Kozea/cssselect2
 * Code of conduct: https://www.courtbouillon.org/code-of-conduct.html
+* Professional support: https://www.courtbouillon.org
+* Donation: https://opencollective.com/courtbouillon
 
 cssselect2 has been created and developed by Kozea (https://kozea.fr/).
 Professional support, maintenance and community management is provided by
