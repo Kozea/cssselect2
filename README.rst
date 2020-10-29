@@ -4,7 +4,7 @@ documents (HTML, XML, etc.) that can be read by ElementTree-like parsers
 
 * Free software: BSD license
 * For Python 3.6+, tested on CPython and PyPy
-* Documentation: https://cssselect2.readthedocs.io/
+* Documentation: https://doc.courtbouillon.org/cssselect2
 * Changelog: https://github.com/Kozea/cssselect2/releases
 * Code, issues, tests: https://github.com/Kozea/cssselect2
 * Code of conduct: https://www.courtbouillon.org/code-of-conduct.html
