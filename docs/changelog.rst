@@ -2,6 +2,14 @@ Changelog
 ---------
 
 
+Version 0.4.1
+.............
+
+Released on 2020-10-29.
+
+* Fix PyPI description and various links.
+
+
 Version 0.4.0
 .............
 

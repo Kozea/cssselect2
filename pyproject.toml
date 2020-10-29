@@ -8,10 +8,11 @@ author = 'Simon Sapin'
 author-email = 'simon.sapin@exyr.org'
 maintainer = 'CourtBouillon'
 maintainer-email = 'contact@courtbouillon.org'
-home-page = 'https://cssselect2.readthedocs.io/'
+home-page = 'https://doc.courtbouillon.org/cssselect2/'
 requires = ['tinycss2', 'webencodings']
 requires-python = '>=3.6'
 keywords = 'css elementtree'
+description-file = 'README.rst'
 classifiers = [
   'Development Status :: 5 - Production/Stable',
   'Intended Audience :: Developers',

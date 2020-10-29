@@ -21,7 +21,7 @@ Fedora, Archlinux, Gentoo…).
 .. _virtual environment: https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/
 .. _pip: https://pip.pypa.io/
 .. _webencodings: https://pythonhosted.org/webencodings/
-.. _tinycss2: https://tinycss2.readthedocs.io/
+.. _tinycss2: https://doc.courtbouillon.org/tinycss2/
 
 
 Basic Example
