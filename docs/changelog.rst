@@ -2,6 +2,16 @@ Changelog
 ---------
 
 
+Version 0.4.0
+.............
+
+Released on 2020-10-29.
+
+* Drop support of Python 3.5, add support of Python 3.9.
+* Don’t crash on empty :not() selectors.
+* New code structure, new packaging, new documentation.
+
+
 Version 0.3.0
 .............
 
