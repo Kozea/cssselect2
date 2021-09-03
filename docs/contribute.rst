@@ -45,7 +45,7 @@ the `pytest`_ library.
 
 You can launch tests (with code coverage and lint) using the following command::
 
-  venv/bin/python -m pytest --flake8 --isort --cov=cssselect2 --cov=tests
+  venv/bin/python -m pytest
 
 .. _pytest: https://docs.pytest.org/
 
