@@ -1,5 +1,5 @@
 name: cssselect2's tests
-on: [push]
+on: [push, pull_request]
 
 jobs:
   tests:
