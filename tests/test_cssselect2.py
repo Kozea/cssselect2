@@ -112,7 +112,7 @@ def test_lang():
 
 
 def test_select():
-    root = etree.fromstring(HTML_IDS)
+    root = etree.parse(CURRENT_FOLDER / 'ids.html')
 
     def select_ids(selector, html_only):
         xml_ids = [element.etree_element.get('id', 'nil') for element in
@@ -242,7 +242,7 @@ def test_select():
 
 
 def test_select_shakespeare():
-    document = etree.fromstring(HTML_SHAKESPEARE)
+    document = etree.parse(CURRENT_FOLDER / 'shakespeare.html')
     body = document.find('.//{http://www.w3.org/1999/xhtml}body')
     body = ElementWrapper.from_xml_root(body)
 
@@ -300,7 +300,3 @@ def test_select_shakespeare():
     assert count('div[class|=dialog]') == 50  # ? Seems right
     # assert count('div[class!=madeup]') == 243  # ? Seems right
     assert count('div[class~=dialog]') == 51  # ? Seems right
-
-
-HTML_IDS = CURRENT_FOLDER.joinpath('ids.html').read_text()
-HTML_SHAKESPEARE = CURRENT_FOLDER.joinpath('shakespeare.html').read_text()
