@@ -228,6 +228,13 @@ def test_select():
     assert pcss('HTML :link', html_only=True) == [
         'link-href', 'tag-anchor', 'nofollow-anchor', 'area-href']
     assert pcss(':visited') == []
+    assert pcss(':hover') == []
+    assert pcss(':active') == []
+    assert pcss(':focus') == []
+    assert pcss(':focus-within') == []
+    assert pcss(':focus-visible') == []
+    assert pcss(':target') == []
+    assert pcss(':target-within') == []
     assert pcss(':enabled') == [
         'link-href', 'tag-anchor', 'nofollow-anchor',
         'checkbox-unchecked', 'text-checked', 'input-hidden',
