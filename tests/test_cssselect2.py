@@ -38,22 +38,22 @@ def get_test_document():
 TEST_DOCUMENT = get_test_document()
 
 
-# Mark failing tests
-for failing in (25, 26):
-    invalid_selectors[failing]['xfail'] = True
-for failing in (4, 12, 108, 112, 119, 127, 205, 206):
-    valid_selectors[failing]['xfail'] = True
-
 # Remove unsuitable tests
 valid_selectors = [
     test for test in valid_selectors
     if not set(test.get('exclude', ())) & {'document', 'xhtml'}]
 
+# Mark failing tests
+for failing in (25, 26):
+    invalid_selectors[failing] = pytest.param(
+        invalid_selectors[failing], marks=pytest.mark.xfail)
+for failing in (2, 9, 104, 105, 111, 119, 197, 198):
+    valid_selectors[failing] = pytest.param(
+        valid_selectors[failing], marks=pytest.mark.xfail)
+
 
 @pytest.mark.parametrize('test', invalid_selectors)
 def test_invalid_selectors(test):
-    if test.get('xfail'):
-        pytest.xfail()
     try:
         compile_selector_list(test['selector'])
     except SelectorError:
@@ -65,8 +65,6 @@ def test_invalid_selectors(test):
 
 @pytest.mark.parametrize('test', valid_selectors)
 def test_valid_selectors(test):
-    if test.get('xfail'):
-        pytest.xfail()
     root = ElementWrapper.from_xml_root(TEST_DOCUMENT)
     result = [element.id for element in root.query_all(test['selector'])]
     if result != test['expect']:  # pragma: no cover
