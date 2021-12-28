@@ -138,10 +138,14 @@ def parse_simple_selector(tokens, namespaces, in_negation=False):
 
 def parse_negation(negation_token, namespaces):
     tokens = TokenStream(negation_token.arguments)
+    tokens.skip_whitespace()
     type_selectors = parse_type_selector(tokens, namespaces)
+    tokens.skip_whitespace()
     if type_selectors is not None and tokens.next() is None:
         return NegationSelector(type_selectors)
 
+    tokens = TokenStream(negation_token.arguments)
+    tokens.skip_whitespace()
     simple_selector, pseudo_element = parse_simple_selector(
         tokens, namespaces, in_negation=True)
     tokens.skip_whitespace()

@@ -47,7 +47,7 @@ valid_selectors = [
 for failing in (25, 26):
     invalid_selectors[failing] = pytest.param(
         invalid_selectors[failing], marks=pytest.mark.xfail)
-for failing in (2, 9, 104, 105, 111, 119, 197, 198):
+for failing in (2, 9, 104, 105, 111, 197, 198):
     valid_selectors[failing] = pytest.param(
         valid_selectors[failing], marks=pytest.mark.xfail)
 
