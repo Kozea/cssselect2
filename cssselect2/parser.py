@@ -97,7 +97,7 @@ def parse_type_selector(tokens, namespaces):
     return simple_selectors
 
 
-def parse_simple_selector(tokens, namespaces, in_negation=False):
+def parse_simple_selector(tokens, namespaces):
     peek = tokens.peek()
     if peek is None:
         return None, None
@@ -137,8 +137,6 @@ def parse_simple_selector(tokens, namespaces, in_negation=False):
         elif next is not None and next.type == 'function':
             name = next.lower_name
             if name == 'not':
-                if in_negation:
-                    raise SelectorError(next, 'nested :not()')
                 return parse_negation(next, namespaces), None
             else:
                 return (
@@ -159,8 +157,7 @@ def parse_negation(negation_token, namespaces):
 
     tokens = TokenStream(negation_token.arguments)
     tokens.skip_whitespace()
-    simple_selector, pseudo_element = parse_simple_selector(
-        tokens, namespaces, in_negation=True)
+    simple_selector, pseudo_element = parse_simple_selector(tokens, namespaces)
     tokens.skip_whitespace()
     if (pseudo_element is None and
             tokens.next() is None and
