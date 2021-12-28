@@ -1,4 +1,4 @@
-cssselect2 is a straightforward implementation of CSS3 Selectors for markup
+cssselect2 is a straightforward implementation of CSS4 Selectors for markup
 documents (HTML, XML, etc.) that can be read by ElementTree-like parsers
 (including cElementTree, lxml, html5lib, etc.)
 
