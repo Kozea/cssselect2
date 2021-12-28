@@ -4,37 +4,33 @@ Test suite for cssselect2.
 
 """
 
-import json
-import os.path
 import xml.etree.ElementTree as etree
+from pathlib import Path
 
 import pytest
 from cssselect2 import ElementWrapper, SelectorError, compile_selector_list
 
+from .w3_selectors import invalid_selectors, valid_selectors
 
-def resource(filename):
-    return os.path.join(os.path.dirname(__file__), filename)
-
-
-def load_json(filename):
-    return json.load(open(resource(filename), encoding='utf-8'))
+CURRENT_FOLDER = Path(__file__).parent
 
 
 def get_test_document():
-    document = etree.parse(resource('content.xhtml'))
-    parent = next(e for e in document.iter() if e.get('id') == 'root')
+    document = etree.parse(CURRENT_FOLDER / 'content.xhtml')
+    parent = document.find(".//*[@id='root']")
 
     # Setup namespace tests
     for id in ('any-namespace', 'no-namespace'):
         div = etree.SubElement(parent, '{http://www.w3.org/1999/xhtml}div')
         div.set('id', id)
-        etree.SubElement(div, '{http://www.w3.org/1999/xhtml}div') \
-            .set('id', id + '-div1')
-        etree.SubElement(div, '{http://www.w3.org/1999/xhtml}div') \
-            .set('id', id + '-div2')
-        etree.SubElement(div, 'div').set('id', id + '-div3')
-        etree.SubElement(div, '{http://www.example.org/ns}div') \
-            .set('id', id + '-div4')
+        div1 = etree.SubElement(div, '{http://www.w3.org/1999/xhtml}div')
+        div1.set('id', id + '-div1')
+        div2 = etree.SubElement(div, '{http://www.w3.org/1999/xhtml}div')
+        div2.set('id', id + '-div2')
+        div3 = etree.SubElement(div, 'div')
+        div3.set('id', id + '-div3')
+        div4 = etree.SubElement(div, '{http://www.example.org/ns}div')
+        div4.set('id', id + '-div4')
 
     return document
 
@@ -42,7 +38,19 @@ def get_test_document():
 TEST_DOCUMENT = get_test_document()
 
 
-@pytest.mark.parametrize('test', load_json('invalid_selectors.json'))
+# Mark failing tests
+for failing in (25, 26):
+    invalid_selectors[failing]['xfail'] = True
+for failing in (4, 12, 108, 112, 119, 127, 205, 206):
+    valid_selectors[failing]['xfail'] = True
+
+# Remove unsuitable tests
+valid_selectors = [
+    test for test in valid_selectors
+    if not set(test.get('exclude', ())) & {'document', 'xhtml'}]
+
+
+@pytest.mark.parametrize('test', invalid_selectors)
 def test_invalid_selectors(test):
     if test.get('xfail'):
         pytest.xfail()
@@ -50,25 +58,21 @@ def test_invalid_selectors(test):
         compile_selector_list(test['selector'])
     except SelectorError:
         pass
-    else:
-        raise AssertionError('Should be invalid: %(selector)r %(name)s' % test)
+    else:  # pragma: no cover
+        raise AssertionError(
+            f'Should be invalid: {test["selector"]!r} ({test["name"]})')
 
 
-@pytest.mark.parametrize('test', load_json('valid_selectors.json'))
+@pytest.mark.parametrize('test', valid_selectors)
 def test_valid_selectors(test):
     if test.get('xfail'):
         pytest.xfail()
-    exclude = test.get('exclude', ())
-    if 'document' in exclude or 'xhtml' in exclude:
-        return
     root = ElementWrapper.from_xml_root(TEST_DOCUMENT)
-    result = [e.id for e in root.query_all(test['selector'])]
-    if result != test['expect']:
-        print(test['selector'])
-        print(result)
-        print('!=')
-        print(test['expect'])
-        raise AssertionError(test['name'])
+    result = [element.id for element in root.query_all(test['selector'])]
+    if result != test['expect']:  # pragma: no cover
+        raise AssertionError(
+            f'{test["selector"]!r}: {result} != {test["expect"]}'
+            f'({test["name"]})')
 
 
 def test_lang():
@@ -120,10 +124,7 @@ def test_select():
                    ElementWrapper.from_xml_root(root).query_all(selector)]
         html_ids = [element.etree_element.get('id', 'nil') for element in
                     ElementWrapper.from_html_root(root).query_all(selector)]
-        if html_only:
-            assert xml_ids == []
-        else:
-            assert xml_ids == html_ids
+        assert xml_ids == ([] if html_only else html_ids)
         return html_ids
 
     def pcss(main, *selectors, **kwargs):
@@ -306,5 +307,5 @@ def test_select_shakespeare():
     assert count('div[class~=dialog]') == 51  # ? Seems right
 
 
-HTML_IDS = open(resource('ids.html')).read()
-HTML_SHAKESPEARE = open(resource('shakespeare.html')).read()
+HTML_IDS = CURRENT_FOLDER.joinpath('ids.html').read_text()
+HTML_SHAKESPEARE = CURRENT_FOLDER.joinpath('shakespeare.html').read_text()
