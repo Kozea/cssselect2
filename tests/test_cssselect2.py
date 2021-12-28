@@ -44,9 +44,6 @@ valid_selectors = [
     if not set(test.get('exclude', ())) & {'document', 'xhtml'}]
 
 # Mark failing tests
-for failing in (25, 26):
-    invalid_selectors[failing] = pytest.param(
-        invalid_selectors[failing], marks=pytest.mark.xfail)
 for failing in (2, 9, 104, 105, 111, 197, 198):
     valid_selectors[failing] = pytest.param(
         valid_selectors[failing], marks=pytest.mark.xfail)

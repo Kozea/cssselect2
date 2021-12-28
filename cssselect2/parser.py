@@ -8,6 +8,15 @@ from tinycss2 import parse_component_value_list
 
 __all__ = ['parse']
 
+SUPPORTED_PSEUDO_ELEMENTS = {
+    # As per CSS Pseudo-Elements Module Level 4
+    'first-line', 'first-letter', 'prefix', 'postfix', 'selection',
+    'target-text', 'spelling-error', 'grammar-error', 'before', 'after',
+    'marker', 'placeholder', 'file-selector-button',
+    # As per CSS Scoping Module Level 1
+    'content', 'shadow',
+}
+
 
 def parse(input, namespaces=None):
     """Yield tinycss2 selectors found in given ``input``.
@@ -114,7 +123,11 @@ def parse_simple_selector(tokens, namespaces, in_negation=False):
             if next is None or next.type != 'ident':
                 raise SelectorError(
                     next, 'Expected a pseudo-element name, got %s' % next)
-            return None, next.lower_value
+            value = next.lower_value
+            if value not in SUPPORTED_PSEUDO_ELEMENTS:
+                raise SelectorError(
+                    next, f'Expected a supported pseudo-element, got {value}')
+            return None, value
         elif next is not None and next.type == 'ident':
             name = next.lower_value
             if name in ('before', 'after', 'first-line', 'first-letter'):
