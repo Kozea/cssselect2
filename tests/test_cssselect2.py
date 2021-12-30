@@ -13,6 +13,14 @@ from cssselect2 import ElementWrapper, SelectorError, compile_selector_list
 from .w3_selectors import invalid_selectors, valid_selectors
 
 CURRENT_FOLDER = Path(__file__).parent
+IDS_ROOT = etree.parse(CURRENT_FOLDER / 'ids.html')
+ALL_IDS = [
+    element.etree_element.get('id', 'nil') for element in
+    ElementWrapper.from_html_root(IDS_ROOT).query_all('*')]
+SHAKESPEARE_BODY = (
+    ElementWrapper.from_xml_root(
+        etree.parse(CURRENT_FOLDER / 'shakespeare.html').find(
+            './/{http://www.w3.org/1999/xhtml}body')))
 
 
 def get_test_document():
@@ -114,196 +122,198 @@ def test_lang():
     assert not root.matches(':lang(en)')
 
 
-def test_select():
-    root = etree.fromstring(HTML_IDS)
+@pytest.mark.parametrize('selector, result', (
+    ('*', ALL_IDS),
+    ('div', ['outer-div', 'li-div', 'foobar-div']),
+    ('div div', ['li-div']),
+    ('div, div div', ['outer-div', 'li-div', 'foobar-div']),
+    ('div , div div', ['outer-div', 'li-div', 'foobar-div']),
+    ('a[name]', ['name-anchor']),
+    ('a[rel]', ['tag-anchor', 'nofollow-anchor']),
+    ('a[rel="tag"]', ['tag-anchor']),
+    ('a[href*="localhost"]', ['tag-anchor']),
+    ('a[href*=""]', []),
+    ('a[href^="http"]', ['tag-anchor', 'nofollow-anchor']),
+    ('a[href^="http:"]', ['tag-anchor']),
+    ('a[href^=""]', []),
+    ('a[href$="org"]', ['nofollow-anchor']),
+    ('a[href$=""]', []),
+    ('div[foobar~="bc"]', ['foobar-div']),
+    ('div[foobar~="cde"]', ['foobar-div']),
+    ('[foobar~="ab bc"]', []),
+    ('[foobar~=""]', []),
+    ('[foobar~=" \t"]', []),
+    ('div[foobar~="cd"]', []),
 
-    def select_ids(selector, html_only):
-        xml_ids = [element.etree_element.get('id', 'nil') for element in
-                   ElementWrapper.from_xml_root(root).query_all(selector)]
-        html_ids = [element.etree_element.get('id', 'nil') for element in
-                    ElementWrapper.from_html_root(root).query_all(selector)]
-        assert xml_ids == ([] if html_only else html_ids)
-        return html_ids
+    # Attribute values are case sensitive…
+    ('*[lang|="En"]', ['second-li']),
+    ('[lang|="En-us"]', ['second-li']),
+    ('*[lang|="en"]', []),
+    ('[lang|="en-US"]', []),
+    ('*[lang|="e"]', []),
+    # … but :lang() is not.
+    (':lang(EN)', ['second-li', 'li-div']),
+    ('*:lang(en-US)', ['second-li', 'li-div']),
+    (':lang(En)', ['second-li', 'li-div']),
+    (':lang(e)', []),
 
-    def pcss(main, *selectors, **kwargs):
-        html_only = kwargs.pop('html_only', False)
-        result = select_ids(main, html_only)
-        for selector in selectors:
-            assert select_ids(selector, html_only) == result
-        return result
-
-    all_ids = pcss('*')
-    assert all_ids[:6] == [
-        'html', 'nil', 'link-href', 'link-nohref', 'nil', 'outer-div']
-    assert all_ids[-1:] == ['foobar-span']
-    assert pcss('div') == ['outer-div', 'li-div', 'foobar-div']
-    assert pcss('DIV', html_only=True) == [
-        'outer-div', 'li-div', 'foobar-div']  # case-insensitive in HTML
-    assert pcss('div div') == ['li-div']
-    assert pcss('div, div div') == ['outer-div', 'li-div', 'foobar-div']
-    assert pcss('div , div div') == ['outer-div', 'li-div', 'foobar-div']
-    assert pcss('a[name]') == ['name-anchor']
-    assert pcss('a[NAme]', html_only=True) == [
-        'name-anchor']  # case-insensitive in HTML:
-    assert pcss('a[rel]') == ['tag-anchor', 'nofollow-anchor']
-    assert pcss('a[rel="tag"]') == ['tag-anchor']
-    assert pcss('a[href*="localhost"]') == ['tag-anchor']
-    assert pcss('a[href*=""]') == []
-    assert pcss('a[href^="http"]') == ['tag-anchor', 'nofollow-anchor']
-    assert pcss('a[href^="http:"]') == ['tag-anchor']
-    assert pcss('a[href^=""]') == []
-    assert pcss('a[href$="org"]') == ['nofollow-anchor']
-    assert pcss('a[href$=""]') == []
-    assert pcss('div[foobar~="bc"]', 'div[foobar~="cde"]') == [
-        'foobar-div']
-    assert pcss('[foobar~="ab bc"]',
-                '[foobar~=""]', '[foobar~=" \t"]') == []
-    assert pcss('div[foobar~="cd"]') == []
-    assert pcss('*[lang|="En"]', '[lang|="En-us"]') == ['second-li']
-    # Attribute values are case sensitive
-    assert pcss('*[lang|="en"]', '[lang|="en-US"]') == []
-    assert pcss('*[lang|="e"]') == []
-    # ... :lang() is not.
-    assert pcss(
-        ':lang(EN)', '*:lang(en-US)'
-        ':lang(En)'
-    ) == ['second-li', 'li-div']
-    assert pcss(':lang(e)'  # , html_only=True
-                ) == []
-    assert pcss('li:nth-child(3)') == ['third-li']
-    assert pcss('li:nth-child(10)') == []
-    assert pcss('li:nth-child(2n)', 'li:nth-child(even)',
-                'li:nth-child(2n+0)') == [
-        'second-li', 'fourth-li', 'sixth-li']
-    assert pcss('li:nth-child(+2n+1)', 'li:nth-child(odd)') == [
-        'first-li', 'third-li', 'fifth-li', 'seventh-li']
-    assert pcss('li:nth-child(2n+4)') == ['fourth-li', 'sixth-li']
-    assert pcss('li:nth-child(3n+1)') == [
-        'first-li', 'fourth-li', 'seventh-li']
-    assert pcss('li:nth-last-child(1)') == ['seventh-li']
-    assert pcss('li:nth-last-child(0)') == []
-    assert pcss('li:nth-last-child(2n+2)', 'li:nth-last-child(even)') == [
-        'second-li', 'fourth-li', 'sixth-li']
-    assert pcss('li:nth-last-child(2n+4)') == ['second-li', 'fourth-li']
-    assert pcss('ol:first-of-type') == ['first-ol']
-    assert pcss('ol:nth-child(1)') == []
-    assert pcss('ol:nth-of-type(2)') == ['second-ol']
-    assert pcss('ol:nth-last-of-type(2)') == ['first-ol']
-    assert pcss('span:only-child') == ['foobar-span']
-    assert pcss('div:only-child') == ['li-div']
-    assert pcss('div *:only-child') == ['li-div', 'foobar-span']
-    assert pcss('p *:only-of-type') == ['p-em', 'fieldset']
-    assert pcss('p:only-of-type') == ['paragraph']
-    assert pcss('a:empty', 'a:EMpty') == ['name-anchor']
-    assert pcss('li:empty') == [
-        'third-li', 'fourth-li', 'fifth-li', 'sixth-li']
-    assert pcss(':root', 'html:root') == ['html']
-    assert pcss('li:root', '* :root') == []
-    assert pcss('.a', '.b', '*.a', 'ol.a') == ['first-ol']
-    assert pcss('.c', '*.c') == ['first-ol', 'third-li', 'fourth-li']
-    assert pcss('ol *.c', 'ol li.c', 'li ~ li.c', 'ol > li.c') == [
-        'third-li', 'fourth-li']
-    assert pcss('#first-li', 'li#first-li', '*#first-li') == ['first-li']
-    assert pcss('li div', 'li > div', 'div div') == ['li-div']
-    assert pcss('div > div') == []
-    assert pcss('div>.c', 'div > .c') == ['first-ol']
-    assert pcss('div + div') == ['foobar-div']
-    assert pcss('a ~ a') == ['tag-anchor', 'nofollow-anchor']
-    assert pcss('a[rel="tag"] ~ a') == ['nofollow-anchor']
-    assert pcss('ol#first-ol li:last-child') == ['seventh-li']
-    assert pcss('ol#first-ol *:last-child') == ['li-div', 'seventh-li']
-    assert pcss('#outer-div:first-child') == ['outer-div']
-    assert pcss('#outer-div :first-child') == [
+    ('li:nth-child(3)', ['third-li']),
+    ('li:nth-child(10)', []),
+    ('li:nth-child(2n)', ['second-li', 'fourth-li', 'sixth-li']),
+    ('li:nth-child(even)', ['second-li', 'fourth-li', 'sixth-li']),
+    ('li:nth-child(+2n+0)', ['second-li', 'fourth-li', 'sixth-li']),
+    ('li:nth-child(2n+1)', ['first-li', 'third-li', 'fifth-li', 'seventh-li']),
+    ('li:nth-child(odd)', ['first-li', 'third-li', 'fifth-li', 'seventh-li']),
+    ('li:nth-child(2n+4)', ['fourth-li', 'sixth-li']),
+    ('li:nth-child(3n+1)', ['first-li', 'fourth-li', 'seventh-li']),
+    ('li:nth-last-child(1)', ['seventh-li']),
+    ('li:nth-last-child(0)', []),
+    ('li:nth-last-child(2n+2)', ['second-li', 'fourth-li', 'sixth-li']),
+    ('li:nth-last-child(even)', ['second-li', 'fourth-li', 'sixth-li']),
+    ('li:nth-last-child(2n+4)', ['second-li', 'fourth-li']),
+    ('ol:first-of-type', ['first-ol']),
+    ('ol:nth-child(1)', []),
+    ('ol:nth-of-type(2)', ['second-ol']),
+    ('ol:nth-last-of-type(2)', ['first-ol']),
+    ('span:only-child', ['foobar-span']),
+    ('div:only-child', ['li-div']),
+    ('div *:only-child', ['li-div', 'foobar-span']),
+    ('p *:only-of-type', ['p-em', 'fieldset']),
+    ('p:only-of-type', ['paragraph']),
+    ('a:empty', ['name-anchor']),
+    ('a:EMpty', ['name-anchor']),
+    ('li:empty', ['third-li', 'fourth-li', 'fifth-li', 'sixth-li']),
+    (':root', ['html']),
+    ('html:root', ['html']),
+    ('li:root', []),
+    ('* :root', []),
+    ('.a', ['first-ol']),
+    ('.b', ['first-ol']),
+    ('*.a', ['first-ol']),
+    ('ol.a', ['first-ol']),
+    ('.c', ['first-ol', 'third-li', 'fourth-li']),
+    ('*.c', ['first-ol', 'third-li', 'fourth-li']),
+    ('ol *.c', ['third-li', 'fourth-li']),
+    ('ol li.c', ['third-li', 'fourth-li']),
+    ('li ~ li.c', ['third-li', 'fourth-li']),
+    ('ol > li.c', ['third-li', 'fourth-li']),
+    ('#first-li', ['first-li']),
+    ('li#first-li', ['first-li']),
+    ('*#first-li', ['first-li']),
+    ('li div', ['li-div']),
+    ('li > div', ['li-div']),
+    ('div div', ['li-div']),
+    ('div > div', []),
+    ('div>.c', ['first-ol']),
+    ('div > .c', ['first-ol']),
+    ('div + div', ['foobar-div']),
+    ('a ~ a', ['tag-anchor', 'nofollow-anchor']),
+    ('a[rel="tag"] ~ a', ['nofollow-anchor']),
+    ('ol#first-ol li:last-child', ['seventh-li']),
+    ('ol#first-ol *:last-child', ['li-div', 'seventh-li']),
+    ('#outer-div:first-child', ['outer-div']),
+    ('#outer-div :first-child', [
         'name-anchor', 'first-li', 'li-div', 'p-b',
-        'checkbox-fieldset-disabled', 'area-href']
-    assert pcss('a[href]') == ['tag-anchor', 'nofollow-anchor']
-    assert pcss(':not(*)') == []
-    assert pcss('a:not([href])') == ['name-anchor']
-    assert pcss('ol :Not([class])') == [
+        'checkbox-fieldset-disabled', 'area-href']),
+    ('a[href]', ['tag-anchor', 'nofollow-anchor']),
+    (':not(*)', []),
+    ('a:not([href])', ['name-anchor']),
+    ('ol :Not([class])', [
         'first-li', 'second-li', 'li-div',
-        'fifth-li', 'sixth-li', 'seventh-li']
+        'fifth-li', 'sixth-li', 'seventh-li']),
+
     # Invalid characters in XPath element names, should not crash
-    assert pcss(r'di\a0 v', r'div\[') == []
-    assert pcss(r'[h\a0 ref]', r'[h\]ref]') == []
+    (r'di\a0 v', []),
+    (r'div\[', []),
+    (r'[h\a0 ref]', []),
+    (r'[h\]ref]', []),
 
-    assert pcss(':link') == [
-        'link-href', 'tag-anchor', 'nofollow-anchor', 'area-href']
-    assert pcss('HTML :link', html_only=True) == [
-        'link-href', 'tag-anchor', 'nofollow-anchor', 'area-href']
-    assert pcss(':visited') == []
-    assert pcss(':enabled') == [
-        'link-href', 'tag-anchor', 'nofollow-anchor',
-        'checkbox-unchecked', 'text-checked', 'input-hidden',
-        'checkbox-checked', 'area-href']
-    assert pcss(':disabled') == [
+    (':link', ['link-href', 'tag-anchor', 'nofollow-anchor', 'area-href']),
+    (':visited', []),
+    (':enabled', [
+        'link-href', 'tag-anchor', 'nofollow-anchor', 'checkbox-unchecked',
+        'text-checked', 'input-hidden', 'checkbox-checked', 'area-href']),
+    (':disabled', [
         'checkbox-disabled', 'input-hidden-disabled',
-        'checkbox-disabled-checked', 'fieldset',
-        'checkbox-fieldset-disabled',
-        'hidden-fieldset-disabled']
-    assert pcss(':checked') == [
-        'checkbox-checked', 'checkbox-disabled-checked']
+        'checkbox-disabled-checked', 'fieldset', 'checkbox-fieldset-disabled',
+        'hidden-fieldset-disabled']),
+    (':checked', ['checkbox-checked', 'checkbox-disabled-checked']),
+))
+def test_select(selector, result):
+    xml_ids = [
+        element.etree_element.get('id', 'nil') for element in
+        ElementWrapper.from_xml_root(IDS_ROOT).query_all(selector)]
+    html_ids = [
+        element.etree_element.get('id', 'nil') for element in
+        ElementWrapper.from_html_root(IDS_ROOT).query_all(selector)]
+    assert xml_ids == html_ids == result
 
 
-def test_select_shakespeare():
-    document = etree.fromstring(HTML_SHAKESPEARE)
-    body = document.find('.//{http://www.w3.org/1999/xhtml}body')
-    body = ElementWrapper.from_xml_root(body)
-
-    def count(selector):
-        return sum(1 for _ in body.query_all(selector))
-
-    # Data borrowed from http://mootools.net/slickspeed/
-
-    # # Changed from original; probably because I'm only
-    # # searching the body.
-    # assert count('*') == 252
-    assert count('*') == 246
-    # assert count('div:contains(CELIA)') == 26
-    assert count('div:only-child') == 22  # ?
-    assert count('div:nth-child(even)') == 106
-    assert count('div:nth-child(2n)') == 106
-    assert count('div:nth-child(odd)') == 137
-    assert count('div:nth-child(2n+1)') == 137
-    assert count('div:nth-child(n)') == 243
-    assert count('div:last-child') == 53
-    assert count('div:first-child') == 51
-    assert count('div > div') == 242
-    assert count('div + div') == 190
-    assert count('div ~ div') == 190
-    assert count('body') == 1
-    assert count('body div') == 243
-    assert count('div') == 243
-    assert count('div div') == 242
-    assert count('div div div') == 241
-    assert count('div, div, div') == 243
-    assert count('div, a, span') == 243
-    assert count('.dialog') == 51
-    assert count('div.dialog') == 51
-    assert count('div .dialog') == 51
-    assert count('div.character, div.dialog') == 99
-    assert count('div.direction.dialog') == 0
-    assert count('div.dialog.direction') == 0
-    assert count('div.dialog.scene') == 1
-    assert count('div.scene.scene') == 1
-    assert count('div.scene .scene') == 0
-    assert count('div.direction .dialog ') == 0
-    assert count('div .dialog .direction') == 4
-    assert count('div.dialog .dialog .direction') == 4
-    assert count('#speech5') == 1
-    assert count('div#speech5') == 1
-    assert count('div #speech5') == 1
-    assert count('div.scene div.dialog') == 49
-    assert count('div#scene1 div.dialog div') == 142
-    assert count('#scene1 #speech1') == 1
-    assert count('div[class]') == 103
-    assert count('div[class=dialog]') == 50
-    assert count('div[class^=dia]') == 51
-    assert count('div[class$=log]') == 50
-    assert count('div[class*=sce]') == 1
-    assert count('div[class|=dialog]') == 50  # ? Seems right
-    # assert count('div[class!=madeup]') == 243  # ? Seems right
-    assert count('div[class~=dialog]') == 51  # ? Seems right
+@pytest.mark.parametrize('selector, result', (
+    ('DIV', ['outer-div', 'li-div', 'foobar-div']),
+    ('a[NAme]', ['name-anchor']),
+    ('HTML :link', [
+        'link-href', 'tag-anchor', 'nofollow-anchor', 'area-href']),
+))
+def test_html_select(selector, result):
+    assert not [
+        element.etree_element.get('id', 'nil') for element in
+        ElementWrapper.from_xml_root(IDS_ROOT).query_all(selector)]
+    assert result == [
+        element.etree_element.get('id', 'nil') for element in
+        ElementWrapper.from_html_root(IDS_ROOT).query_all(selector)]
 
 
-HTML_IDS = CURRENT_FOLDER.joinpath('ids.html').read_text()
-HTML_SHAKESPEARE = CURRENT_FOLDER.joinpath('shakespeare.html').read_text()
+# Data borrowed from http://mootools.net/slickspeed/
+@pytest.mark.parametrize('selector, result', (
+    # Changed from original because we’re only searching the body.
+    # ('*', 252),
+    ('*', 246),
+    # ('div:contains(CELIA)', 26),
+    ('div:only-child', 22),  # ?
+    ('div:nth-child(even)', 106),
+    ('div:nth-child(2n)', 106),
+    ('div:nth-child(odd)', 137),
+    ('div:nth-child(2n+1)', 137),
+    ('div:nth-child(n)', 243),
+    ('div:last-child', 53),
+    ('div:first-child', 51),
+    ('div > div', 242),
+    ('div + div', 190),
+    ('div ~ div', 190),
+    ('body', 1),
+    ('body div', 243),
+    ('div', 243),
+    ('div div', 242),
+    ('div div div', 241),
+    ('div, div, div', 243),
+    ('div, a, span', 243),
+    ('.dialog', 51),
+    ('div.dialog', 51),
+    ('div .dialog', 51),
+    ('div.character, div.dialog', 99),
+    ('div.direction.dialog', 0),
+    ('div.dialog.direction', 0),
+    ('div.dialog.scene', 1),
+    ('div.scene.scene', 1),
+    ('div.scene .scene', 0),
+    ('div.direction .dialog ', 0),
+    ('div .dialog .direction', 4),
+    ('div.dialog .dialog .direction', 4),
+    ('#speech5', 1),
+    ('div#speech5', 1),
+    ('div #speech5', 1),
+    ('div.scene div.dialog', 49),
+    ('div#scene1 div.dialog div', 142),
+    ('#scene1 #speech1', 1),
+    ('div[class]', 103),
+    ('div[class=dialog]', 50),
+    ('div[class^=dia]', 51),
+    ('div[class$=log]', 50),
+    ('div[class*=sce]', 1),
+    ('div[class|=dialog]', 50),  # ? Seems right
+    # assert count('div[class!=madeup]', 243),  # ? Seems right
+    ('div[class~=dialog]', 51),  # ? Seems right
+))
+def test_select_shakespeare(selector, result):
+    assert sum(1 for _ in SHAKESPEARE_BODY.query_all(selector)) == result
