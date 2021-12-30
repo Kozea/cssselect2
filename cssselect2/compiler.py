@@ -244,9 +244,10 @@ def _compile_node(selector):
                     html_tag_eq('option'),
                 )
             )
-        elif selector.name in ('visited', 'hover', 'active',
-                               'focus', 'focus-within', 'focus-visible',
-                               'target', 'target-within'):
+        elif selector.name in (
+                'visited', 'hover', 'active', 'focus', 'focus-within',
+                'focus-visible', 'target', 'target-within', 'current', 'past',
+                'future'):
             # Not applicable in a static context: never match.
             return '0'
         elif selector.name == 'root':
