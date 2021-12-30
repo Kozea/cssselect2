@@ -247,7 +247,8 @@ def _compile_node(selector):
         elif selector.name in (
                 'visited', 'hover', 'active', 'focus', 'focus-within',
                 'focus-visible', 'target', 'target-within', 'current', 'past',
-                'future'):
+                'future', 'playing', 'paused', 'seeking', 'buffering',
+                'stalled', 'muted', 'volume-locked'):
             # Not applicable in a static context: never match.
             return '0'
         elif selector.name == 'root':
