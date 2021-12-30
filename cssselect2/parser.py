@@ -18,7 +18,7 @@ SUPPORTED_PSEUDO_ELEMENTS = {
 }
 
 
-def parse(input, namespaces=None):
+def parse(input, namespaces=None, forgiving=False):
     """Yield tinycss2 selectors found in given ``input``.
 
     :param input:
@@ -38,7 +38,8 @@ def parse(input, namespaces=None):
         elif next == ',':
             yield parse_selector(tokens, namespaces)
         else:
-            raise SelectorError(next, 'unpexpected %s token.' % next.type)
+            if not forgiving:
+                raise SelectorError(next, f'unpexpected {next.type} token.')
 
 
 def parse_selector(tokens, namespaces):
