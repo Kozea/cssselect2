@@ -29,14 +29,22 @@ def parse(input, namespaces=None, forgiving=False):
         input = parse_component_value_list(input)
     tokens = TokenStream(input)
     namespaces = namespaces or {}
-    yield parse_selector(tokens, namespaces)
+    try:
+        yield parse_selector(tokens, namespaces)
+    except SelectorError as exception:
+        if not forgiving:
+            raise exception
     tokens.skip_whitespace_and_comment()
     while 1:
         next = tokens.next()
         if next is None:
             return
         elif next == ',':
-            yield parse_selector(tokens, namespaces)
+            try:
+                yield parse_selector(tokens, namespaces)
+            except SelectorError as exception:
+                if not forgiving:
+                    raise exception
         else:
             if not forgiving:
                 raise SelectorError(next, f'unpexpected {next.type} token.')
@@ -139,6 +147,8 @@ def parse_simple_selector(tokens, namespaces):
             name = next.lower_name
             if name == 'not':
                 return parse_negation(next, namespaces), None
+            elif name == 'is':
+                return parse_matches_any(next, namespaces), None
             else:
                 return (
                     FunctionalPseudoClassSelector(name, next.arguments), None)
@@ -150,14 +160,11 @@ def parse_simple_selector(tokens, namespaces):
 
 def parse_negation(negation_token, namespaces):
     tokens = TokenStream(negation_token.arguments)
-    tokens.skip_whitespace()
     type_selectors = parse_type_selector(tokens, namespaces)
     tokens.skip_whitespace()
     if type_selectors is not None and tokens.next() is None:
         return NegationSelector(type_selectors)
 
-    tokens = TokenStream(negation_token.arguments)
-    tokens.skip_whitespace()
     simple_selector, pseudo_element = parse_simple_selector(tokens, namespaces)
     tokens.skip_whitespace()
     if (pseudo_element is None and
@@ -167,6 +174,14 @@ def parse_negation(negation_token, namespaces):
     else:
         raise SelectorError(
             negation_token, ':not() only accepts a simple selector')
+
+
+def parse_matches_any(matches_any_token, namespaces):
+    selectors = [
+        selector.parsed_tree for selector in
+        parse(matches_any_token.arguments, namespaces, forgiving=True)
+        if selector.pseudo_element is None]
+    return MatchesAnySelector(selectors)
 
 
 def parse_attribute_selector(tokens, namespaces):
@@ -437,3 +452,18 @@ class FunctionalPseudoClassSelector(object):
 class NegationSelector(CompoundSelector):
     def __repr__(self):
         return ':not(%r)' % CompoundSelector.__repr__(self)
+
+
+class MatchesAnySelector:
+    def __init__(self, selector_list):
+        self.selector_list = selector_list
+
+    @property
+    def specificity(self):
+        if self.selector_list:
+            return max(selector.specificity for selector in self.selector_list)
+        else:
+            return (0, 0, 0)
+
+    def __repr__(self):
+        return f':is({", ".join(repr(sel) for sel in self.selector_list)})'

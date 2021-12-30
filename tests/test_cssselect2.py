@@ -218,6 +218,13 @@ def test_lang():
     ('ol :Not([class])', [
         'first-li', 'second-li', 'li-div',
         'fifth-li', 'sixth-li', 'seventh-li']),
+    (':is(*)', ALL_IDS),
+    (':is(div)', ['outer-div', 'li-div', 'foobar-div']),
+    (':is(div, fieldset)', ['outer-div', 'li-div', 'fieldset', 'foobar-div']),
+    (':is(:::wrong)', []),
+    (':is(div, :::wrong, fieldset)', [
+        'outer-div', 'li-div', 'fieldset', 'foobar-div']),
+    ('div :is(div, div)', ['li-div']),
 
     # Invalid characters in XPath element names, should not crash
     (r'di\a0 v', []),

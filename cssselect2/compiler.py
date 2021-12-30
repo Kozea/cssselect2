@@ -144,6 +144,12 @@ def _compile_node(selector):
         else:
             return test
 
+    elif isinstance(selector, parser.MatchesAnySelector):
+        sub_expressions = [
+            expr for expr in map(_compile_node, selector.selector_list)
+            if expr != '0']
+        return ' or '.join(f'({expr})' for expr in sub_expressions) or '0'
+
     elif isinstance(selector, parser.LocalNameSelector):
         return ('el.local_name == (%r if el.in_html_document else %r)'
                 % (selector.lower_local_name, selector.local_name))
