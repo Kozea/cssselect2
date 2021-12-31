@@ -214,7 +214,7 @@ def _compile_node(selector):
             raise NotImplementedError  # TODO
 
     elif isinstance(selector, parser.PseudoClassSelector):
-        if selector.name == 'link':
+        if selector.name in ('link', 'any-link'):
             return ('%s and el.etree_element.get("href") is not None'
                     % html_tag_eq('a', 'area', 'link'))
         elif selector.name == 'enabled':

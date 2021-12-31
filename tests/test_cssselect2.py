@@ -249,6 +249,7 @@ def test_lang():
     (r'[h\]ref]', []),
 
     (':link', ['link-href', 'tag-anchor', 'nofollow-anchor', 'area-href']),
+    (':any-link', ['link-href', 'tag-anchor', 'nofollow-anchor', 'area-href']),
     (':visited', []),
     (':hover', []),
     (':active', []),
