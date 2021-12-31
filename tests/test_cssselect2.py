@@ -153,6 +153,12 @@ def test_lang():
     ('*:lang(en-US)', ['second-li', 'li-div']),
     (':lang(En)', ['second-li', 'li-div']),
     (':lang(e)', []),
+    (':lang("en-US")', ['second-li', 'li-div']),
+    pytest.param(
+        ':lang("*-US")', ['second-li', 'li-div'], marks=pytest.mark.xfail),
+    pytest.param(
+        ':lang(\\*-US)', ['second-li', 'li-div'], marks=pytest.mark.xfail),
+    (':lang(en /* English */, fr /* French */)', ['second-li', 'li-div']),
 
     ('li:nth-child(3)', ['third-li']),
     ('li:nth-child(10)', []),

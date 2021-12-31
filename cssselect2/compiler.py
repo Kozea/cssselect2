@@ -286,17 +286,25 @@ def _compile_node(selector):
 
     elif isinstance(selector, parser.FunctionalPseudoClassSelector):
         if selector.name == 'lang':
+            langs = []
             tokens = [
-                t for t in selector.arguments
-                if t.type != 'whitespace'
-            ]
-            if len(tokens) == 1 and tokens[0].type == 'ident':
-                lang = tokens[0].lower_value
-            else:
-                raise SelectorError('Invalid arguments for :lang()')
-
-            return ('el.lang == %r or el.lang.startswith(%r)'
-                    % (lang, lang + '-'))
+                token for token in selector.arguments
+                if token.type not in ('whitespace', 'comment')]
+            while tokens:
+                token = tokens.pop(0)
+                if token.type == 'ident':
+                    langs.append(token.lower_value)
+                elif token.type == 'string':
+                    langs.append(ascii_lower(token.value))
+                else:
+                    raise SelectorError('Invalid arguments for :lang()')
+                if tokens:
+                    token = tokens.pop(0)
+                    if token.type != 'ident' and token.value != ',':
+                        raise SelectorError('Invalid arguments for :lang()')
+            return ' or '.join(
+                f'el.lang == {lang!r} or el.lang.startswith({lang + "-"!r})'
+                for lang in langs)
         else:
             if selector.name == 'nth-child':
                 count = 'el.index'
