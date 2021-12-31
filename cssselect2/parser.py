@@ -147,8 +147,8 @@ def parse_simple_selector(tokens, namespaces):
             name = next.lower_name
             if name == 'not':
                 return parse_negation(next, namespaces), None
-            elif name == 'is':
-                return parse_matches_any(next, namespaces), None
+            elif name in ('is', 'where'):
+                return parse_matches_any(next, namespaces, name), None
             else:
                 return (
                     FunctionalPseudoClassSelector(name, next.arguments), None)
@@ -176,12 +176,14 @@ def parse_negation(negation_token, namespaces):
             negation_token, ':not() only accepts a simple selector')
 
 
-def parse_matches_any(matches_any_token, namespaces):
+def parse_matches_any(matches_any_token, namespaces, name):
     selectors = [
         selector.parsed_tree for selector in
         parse(matches_any_token.arguments, namespaces, forgiving=True)
         if selector.pseudo_element is None]
-    return MatchesAnySelector(selectors)
+    selector_class = (
+        MatchesAnySelector if name == 'is' else SpecificityAdjustmentSelector)
+    return selector_class(selectors)
 
 
 def parse_attribute_selector(tokens, namespaces):
@@ -467,3 +469,15 @@ class MatchesAnySelector:
 
     def __repr__(self):
         return f':is({", ".join(repr(sel) for sel in self.selector_list)})'
+
+
+class SpecificityAdjustmentSelector:
+    def __init__(self, selector_list):
+        self.selector_list = selector_list
+
+    @property
+    def specificity(self):
+        return (0, 0, 0)
+
+    def __repr__(self):
+        return f':where({", ".join(repr(sel) for sel in self.selector_list)})'

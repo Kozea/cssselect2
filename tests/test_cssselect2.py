@@ -225,6 +225,22 @@ def test_lang():
     (':is(div, :::wrong, fieldset)', [
         'outer-div', 'li-div', 'fieldset', 'foobar-div']),
     ('div :is(div, div)', ['li-div']),
+    ('li:is(.c)', ['third-li', 'fourth-li']),
+    ('input:is([type="text"])', ['text-checked']),
+    ('div:is(:not(#outer-div))', ['li-div', 'foobar-div']),
+    ('div:is(div::before)', []),
+    (':where(*)', ALL_IDS),
+    (':where(div)', ['outer-div', 'li-div', 'foobar-div']),
+    (':where(div, fieldset)', [
+        'outer-div', 'li-div', 'fieldset', 'foobar-div']),
+    (':where(:::wrong)', []),
+    (':where(div, :::wrong, fieldset)', [
+        'outer-div', 'li-div', 'fieldset', 'foobar-div']),
+    ('div :where(div, div)', ['li-div']),
+    ('li:where(.c)', ['third-li', 'fourth-li']),
+    ('input:where([type="text"])', ['text-checked']),
+    ('div:where(:not(#outer-div))', ['li-div', 'foobar-div']),
+    ('div:where(div::before)', []),
 
     # Invalid characters in XPath element names, should not crash
     (r'di\a0 v', []),

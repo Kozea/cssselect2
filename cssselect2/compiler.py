@@ -144,7 +144,8 @@ def _compile_node(selector):
         else:
             return test
 
-    elif isinstance(selector, parser.MatchesAnySelector):
+    elif isinstance(selector, (
+            parser.MatchesAnySelector, parser.SpecificityAdjustmentSelector)):
         sub_expressions = [
             expr for expr in map(_compile_node, selector.selector_list)
             if expr != '0']
