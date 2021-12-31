@@ -250,6 +250,7 @@ def test_lang():
 
     (':link', ['link-href', 'tag-anchor', 'nofollow-anchor', 'area-href']),
     (':any-link', ['link-href', 'tag-anchor', 'nofollow-anchor', 'area-href']),
+    (':local-link', ['link-href', 'area-href']),
     (':visited', []),
     (':hover', []),
     (':active', []),

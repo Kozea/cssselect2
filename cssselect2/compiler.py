@@ -1,4 +1,5 @@
 import re
+from urllib.parse import urlparse
 
 from tinycss2.nth import parse_nth
 from webencodings import ascii_lower
@@ -38,11 +39,12 @@ class CompiledSelector(object):
     def __init__(self, parsed_selector):
         source = _compile_node(parsed_selector.parsed_tree)
         self.never_matches = source == '0'
-        self.test = eval(
-            'lambda el: ' + source,
-            {'split_whitespace': split_whitespace, 'ascii_lower': ascii_lower},
-            {},
-        )
+        eval_globals = {
+            'split_whitespace': split_whitespace,
+            'ascii_lower': ascii_lower,
+            'urlparse': urlparse,
+        }
+        self.test = eval('lambda el: ' + source, eval_globals, {})
         self.specificity = parsed_selector.specificity
         self.pseudo_element = parsed_selector.pseudo_element
         self.id = None
@@ -214,9 +216,11 @@ def _compile_node(selector):
             raise NotImplementedError  # TODO
 
     elif isinstance(selector, parser.PseudoClassSelector):
-        if selector.name in ('link', 'any-link'):
-            return ('%s and el.etree_element.get("href") is not None'
-                    % html_tag_eq('a', 'area', 'link'))
+        if selector.name in ('link', 'any-link', 'local-link'):
+            test = '%s and el.etree_element.get("href") is not None '
+            if selector.name == 'local-link':
+                test += 'and not urlparse(el.etree_element.get("href")).scheme'
+            return test % html_tag_eq('a', 'area', 'link')
         elif selector.name == 'enabled':
             return (
                 '(%s and el.etree_element.get("disabled") is None'
