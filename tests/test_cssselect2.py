@@ -224,6 +224,8 @@ def test_lang():
     ('ol :Not([class])', [
         'first-li', 'second-li', 'li-div',
         'fifth-li', 'sixth-li', 'seventh-li']),
+    ('li:not(:nth-child(odd), #second-li)', ['fourth-li', 'sixth-li']),
+    ('li:not(li)', []),
     (':is(*)', ALL_IDS),
     (':is(div)', ['outer-div', 'li-div', 'foobar-div']),
     (':is(div, fieldset)', ['outer-div', 'li-div', 'fieldset', 'foobar-div']),

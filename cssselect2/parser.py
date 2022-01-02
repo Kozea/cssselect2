@@ -145,10 +145,8 @@ def parse_simple_selector(tokens, namespaces):
                 return PseudoClassSelector(name), None
         elif next is not None and next.type == 'function':
             name = next.lower_name
-            if name == 'not':
-                return parse_negation(next, namespaces), None
-            elif name in ('is', 'where'):
-                return parse_matches_any(next, namespaces, name), None
+            if name in ('is', 'where', 'not'):
+                return parse_logical_combination(next, namespaces, name), None
             else:
                 return (
                     FunctionalPseudoClassSelector(name, next.arguments), None)
@@ -158,31 +156,19 @@ def parse_simple_selector(tokens, namespaces):
         return None, None
 
 
-def parse_negation(negation_token, namespaces):
-    tokens = TokenStream(negation_token.arguments)
-    type_selectors = parse_type_selector(tokens, namespaces)
-    tokens.skip_whitespace()
-    if type_selectors is not None and tokens.next() is None:
-        return NegationSelector(type_selectors)
-
-    simple_selector, pseudo_element = parse_simple_selector(tokens, namespaces)
-    tokens.skip_whitespace()
-    if (pseudo_element is None and
-            tokens.next() is None and
-            simple_selector is not None):
-        return NegationSelector([simple_selector])
-    else:
-        raise SelectorError(
-            negation_token, ':not() only accepts a simple selector')
-
-
-def parse_matches_any(matches_any_token, namespaces, name):
+def parse_logical_combination(matches_any_token, namespaces, name):
+    forgiving = True
+    if name == 'is':
+        selector_class = MatchesAnySelector
+    elif name == 'where':
+        selector_class = SpecificityAdjustmentSelector
+    elif name == 'not':
+        forgiving = False
+        selector_class = NegationSelector
     selectors = [
         selector.parsed_tree for selector in
-        parse(matches_any_token.arguments, namespaces, forgiving=True)
+        parse(matches_any_token.arguments, namespaces, forgiving=forgiving)
         if selector.pseudo_element is None]
-    selector_class = (
-        MatchesAnySelector if name == 'is' else SpecificityAdjustmentSelector)
     return selector_class(selectors)
 
 
@@ -451,9 +437,19 @@ class FunctionalPseudoClassSelector(object):
         return ':%s%r' % (self.name, tuple(self.arguments))
 
 
-class NegationSelector(CompoundSelector):
+class NegationSelector:
+    def __init__(self, selector_list):
+        self.selector_list = selector_list
+
+    @property
+    def specificity(self):
+        if self.selector_list:
+            return max(selector.specificity for selector in self.selector_list)
+        else:
+            return (0, 0, 0)
+
     def __repr__(self):
-        return ':not(%r)' % CompoundSelector.__repr__(self)
+        return f':not({", ".join(repr(sel) for sel in self.selector_list)})'
 
 
 class MatchesAnySelector:

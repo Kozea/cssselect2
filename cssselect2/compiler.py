@@ -135,23 +135,24 @@ def _compile_node(selector):
             test = ' and '.join('(%s)' % e for e in sub_expressions)
         else:
             test = '1'  # all([]) == True
+        return test
 
-        if isinstance(selector, parser.NegationSelector):
-            if test == '0':
-                return '1'
-            elif test == '1':
-                return '0'
-            else:
-                return 'not (%s)' % test
-        else:
-            return test
+    elif isinstance(selector, parser.NegationSelector):
+        sub_expressions = [
+            expr for expr in map(_compile_node, selector.selector_list)
+            if expr != '1']
+        if not sub_expressions:
+            return '0'
+        return f'not ({" or ".join(f"({expr})" for expr in sub_expressions)})'
 
     elif isinstance(selector, (
             parser.MatchesAnySelector, parser.SpecificityAdjustmentSelector)):
         sub_expressions = [
             expr for expr in map(_compile_node, selector.selector_list)
             if expr != '0']
-        return ' or '.join(f'({expr})' for expr in sub_expressions) or '0'
+        if not sub_expressions:
+            return '0'
+        return ' or '.join(f'({expr})' for expr in sub_expressions)
 
     elif isinstance(selector, parser.LocalNameSelector):
         return ('el.local_name == (%r if el.in_html_document else %r)'
