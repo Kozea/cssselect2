@@ -260,7 +260,8 @@ def _compile_node(selector):
                 'visited', 'hover', 'active', 'focus', 'focus-within',
                 'focus-visible', 'target', 'target-within', 'current', 'past',
                 'future', 'playing', 'paused', 'seeking', 'buffering',
-                'stalled', 'muted', 'volume-locked'):
+                'stalled', 'muted', 'volume-locked', 'user-valid',
+                'user-invalid'):
             # Not applicable in a static context: never match.
             return '0'
         elif selector.name == 'root':
