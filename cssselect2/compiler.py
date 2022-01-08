@@ -264,7 +264,7 @@ def _compile_node(selector):
                 'user-invalid'):
             # Not applicable in a static context: never match.
             return '0'
-        elif selector.name == 'root':
+        elif selector.name in ('root', 'scope'):
             return 'el.parent is None'
         elif selector.name == 'first-child':
             return 'el.index == 0'
