@@ -308,20 +308,63 @@ def _compile_node(selector):
                 f'el.lang == {lang!r} or el.lang.startswith({lang + "-"!r})'
                 for lang in langs)
         else:
-            if selector.name == 'nth-child':
-                count = 'el.index'
-            elif selector.name == 'nth-last-child':
-                count = '(len(el.etree_siblings) - el.index - 1)'
-            elif selector.name == 'nth-of-type':
-                count = ('sum(1 for s in el.etree_siblings[:el.index]'
-                         '    if s.tag == el.etree_element.tag)')
-            elif selector.name == 'nth-last-of-type':
-                count = ('sum(1 for s in el.etree_siblings[el.index + 1:]'
-                         '    if s.tag == el.etree_element.tag)')
-            else:
-                raise SelectorError('Unknown pseudo-class', selector.name)
+            nth = []
+            selector_list = []
+            current_list = nth
+            for argument in selector.arguments:
+                if argument.type == 'ident' and argument.value == 'of':
+                    if current_list is nth:
+                        current_list = selector_list
+                        continue
+                current_list.append(argument)
 
-            result = parse_nth(selector.arguments)
+            if selector_list:
+                test = ' and '.join(
+                    _compile_node(selector.parsed_tree)
+                    for selector in parser.parse(selector_list))
+                if selector.name == 'nth-child':
+                    count = (
+                        'sum(1 for el in el.iter_previous_siblings()'
+                        f'   if ({test}))')
+                elif selector.name == 'nth-last-child':
+                    count = (
+                        'sum(1 for el in'
+                        '    tuple(el.iter_siblings())[el.index + 1:]'
+                        f'   if ({test}))')
+                elif selector.name == 'nth-of-type':
+                    count = (
+                        'sum(1 for s in ('
+                        '      el for el in el.iter_previous_siblings()'
+                        f'     if ({test}))'
+                        '    if s.etree_element.tag == el.etree_element.tag)')
+                elif selector.name == 'nth-last-of-type':
+                    count = (
+                        'sum(1 for s in ('
+                        '      el for el in'
+                        '      tuple(el.iter_siblings())[el.index + 1:]'
+                        f'     if ({test}))'
+                        '    if s.etree_element.tag == el.etree_element.tag)')
+                else:
+                    raise SelectorError('Unknown pseudo-class', selector.name)
+                count += f'if ({test}) else float("nan")'
+            else:
+                if current_list is selector_list:
+                    raise SelectorError(
+                        'Invalid arguments for :%s()' % selector.name)
+                if selector.name == 'nth-child':
+                    count = 'el.index'
+                elif selector.name == 'nth-last-child':
+                    count = 'len(el.etree_siblings) - el.index - 1'
+                elif selector.name == 'nth-of-type':
+                    count = ('sum(1 for s in el.etree_siblings[:el.index]'
+                             '    if s.tag == el.etree_element.tag)')
+                elif selector.name == 'nth-last-of-type':
+                    count = ('sum(1 for s in el.etree_siblings[el.index + 1:]'
+                             '    if s.tag == el.etree_element.tag)')
+                else:
+                    raise SelectorError('Unknown pseudo-class', selector.name)
+
+            result = parse_nth(nth)
             if result is None:
                 raise SelectorError(
                     'Invalid arguments for :%s()' % selector.name)
@@ -333,11 +376,11 @@ def _compile_node(selector):
             B = b - 1
             if a == 0:
                 # x = B
-                return '%s == %i' % (count, B)
+                return '(%s) == %i' % (count, B)
             else:
                 # n = (x - B) / a
                 return ('next(r == 0 and n >= 0'
-                        '     for n, r in [divmod(%s - %i, %i)])'
+                        '     for n, r in [divmod((%s) - %i, %i)])'
                         % (count, B, a))
 
     else:

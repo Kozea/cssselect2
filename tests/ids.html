@@ -4,10 +4,10 @@
   </head><body>
     <div id="outer-div">
       <a id="name-anchor" name="foo"></a>
-      <a id="tag-anchor" rel="tag" href="http://localhost/foo">link</a>
+      <a id="tag-anchor" rel="tag" class="e" href="http://localhost/foo">link</a>
       <a id="nofollow-anchor" rel="nofollow" href="https://example.org">
         link</a>
-      <ol id="first-ol" class="a b c">
+      <ol id="first-ol" class="a b c e">
         <li id="first-li">content</li>
         <li id="second-li" lang="En-us">
           <div id="li-div">
@@ -36,7 +36,7 @@ c"></li>
           <input type="hidden" id="hidden-fieldset-disabled" />
         </fieldset>
       </p>
-      <ol id="second-ol">
+      <ol id="second-ol" class="e">
       </ol>
       <map name="dummymap">
         <area shape="circle" coords="200,250,25" href="foo.html" id="area-href" />

@@ -34,6 +34,7 @@ invalid_selectors = [
     {'name': 'Invalid pseudo-element', 'selector': ':: before'},
     {'name': 'Undeclared namespace', 'selector': 'ns|div'},
     {'name': 'Undeclared namespace', 'selector': ':not(ns|div)'},
+    {'name': 'Invalid arguments', 'selector': ':nth-child(3 of)'},
     {'name': 'Invalid namespace', 'selector': '^|div'},
     {'name': 'Invalid namespace', 'selector': '$|div'},
     {'name': 'Relative selector', 'selector': '>*'}]

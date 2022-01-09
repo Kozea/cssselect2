@@ -143,6 +143,16 @@ class ElementWrapper(object):
             element = element.previous
             yield element
 
+    def iter_siblings(self):
+        """Return an iterator of newly-created :class:`ElementWrapper` objects
+        for this element’s siblings, in tree order.
+
+        """
+        if self.parent is None:
+            yield self
+        else:
+            yield from self.parent.iter_children()
+
     def iter_children(self):
         """Return an iterator of newly-created :class:`ElementWrapper` objects
         for this element’s child elements,
