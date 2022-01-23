@@ -36,7 +36,6 @@ def parse(input, namespaces=None, forgiving=False):
     except SelectorError as exception:
         if not forgiving:
             raise exception
-    tokens.skip_whitespace_and_comment()
     while 1:
         next = tokens.next()
         if next is None:
@@ -53,6 +52,7 @@ def parse(input, namespaces=None, forgiving=False):
 
 
 def parse_selector(tokens, namespaces):
+    tokens.skip_whitespace_and_comment()
     result, pseudo_element = parse_compound_selector(tokens, namespaces)
     while 1:
         has_whitespace = tokens.skip_whitespace()

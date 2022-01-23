@@ -279,6 +279,16 @@ def test_lang():
         'checkbox-disabled-checked', 'fieldset', 'checkbox-fieldset-disabled',
         'hidden-fieldset-disabled']),
     (':checked', ['checkbox-checked', 'checkbox-disabled-checked']),
+
+    ('a:not([href]), div div', ['name-anchor', 'li-div']),
+    ('a:not([href]) /* test */, div div', ['name-anchor', 'li-div']),
+    ('a:not([href]), /* test */ div div', ['name-anchor', 'li-div']),
+    ('/* test */a:not([href]),div div', ['name-anchor', 'li-div']),
+    ('a:not([href]) , div div/* test */', ['name-anchor', 'li-div']),
+    ('/* test */a:not([href]), /* test */ div div', ['name-anchor', 'li-div']),
+    ('/* test */a:not([href])/* test */,div  div', ['name-anchor', 'li-div']),
+    ('/* test */ a:not([href]), div/* test */ div', ['name-anchor', 'li-div']),
+    ('a:not([href]) /* test */,/* test */div  div', ['name-anchor', 'li-div']),
 ))
 def test_select(selector, result):
     xml_ids = [
