@@ -13,6 +13,8 @@ SUPPORTED_PSEUDO_ELEMENTS = {
     'first-line', 'first-letter', 'prefix', 'postfix', 'selection',
     'target-text', 'spelling-error', 'grammar-error', 'before', 'after',
     'marker', 'placeholder', 'file-selector-button',
+    # As per CSS Generated Content for Paged Media Module
+    'footnote-call', 'footnote-marker',
     # As per CSS Scoping Module Level 1
     'content', 'shadow',
 }
