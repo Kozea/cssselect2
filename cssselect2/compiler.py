@@ -1,4 +1,5 @@
 import re
+from urllib.parse import urlparse
 
 from tinycss2.nth import parse_nth
 from webencodings import ascii_lower
@@ -38,11 +39,12 @@ class CompiledSelector(object):
     def __init__(self, parsed_selector):
         source = _compile_node(parsed_selector.parsed_tree)
         self.never_matches = source == '0'
-        self.test = eval(
-            'lambda el: ' + source,
-            {'split_whitespace': split_whitespace, 'ascii_lower': ascii_lower},
-            {},
-        )
+        eval_globals = {
+            'split_whitespace': split_whitespace,
+            'ascii_lower': ascii_lower,
+            'urlparse': urlparse,
+        }
+        self.test = eval('lambda el: ' + source, eval_globals, {})
         self.specificity = parsed_selector.specificity
         self.pseudo_element = parsed_selector.pseudo_element
         self.id = None
@@ -133,16 +135,24 @@ def _compile_node(selector):
             test = ' and '.join('(%s)' % e for e in sub_expressions)
         else:
             test = '1'  # all([]) == True
+        return test
 
-        if isinstance(selector, parser.NegationSelector):
-            if test == '0':
-                return '1'
-            elif test == '1':
-                return '0'
-            else:
-                return 'not (%s)' % test
-        else:
-            return test
+    elif isinstance(selector, parser.NegationSelector):
+        sub_expressions = [
+            expr for expr in map(_compile_node, selector.selector_list)
+            if expr != '1']
+        if not sub_expressions:
+            return '0'
+        return f'not ({" or ".join(f"({expr})" for expr in sub_expressions)})'
+
+    elif isinstance(selector, (
+            parser.MatchesAnySelector, parser.SpecificityAdjustmentSelector)):
+        sub_expressions = [
+            expr for expr in map(_compile_node, selector.selector_list)
+            if expr != '0']
+        if not sub_expressions:
+            return '0'
+        return ' or '.join(f'({expr})' for expr in sub_expressions)
 
     elif isinstance(selector, parser.LocalNameSelector):
         return ('el.local_name == (%r if el.in_html_document else %r)'
@@ -207,9 +217,11 @@ def _compile_node(selector):
             raise NotImplementedError  # TODO
 
     elif isinstance(selector, parser.PseudoClassSelector):
-        if selector.name == 'link':
-            return ('%s and el.etree_element.get("href") is not None'
-                    % html_tag_eq('a', 'area', 'link'))
+        if selector.name in ('link', 'any-link', 'local-link'):
+            test = '%s and el.etree_element.get("href") is not None '
+            if selector.name == 'local-link':
+                test += 'and not urlparse(el.etree_element.get("href")).scheme'
+            return test % html_tag_eq('a', 'area', 'link')
         elif selector.name == 'enabled':
             return (
                 '(%s and el.etree_element.get("disabled") is None'
@@ -244,11 +256,15 @@ def _compile_node(selector):
                     html_tag_eq('option'),
                 )
             )
-        elif selector.name in ('visited', 'hover', 'active', 'focus',
-                               'target'):
+        elif selector.name in (
+                'visited', 'hover', 'active', 'focus', 'focus-within',
+                'focus-visible', 'target', 'target-within', 'current', 'past',
+                'future', 'playing', 'paused', 'seeking', 'buffering',
+                'stalled', 'muted', 'volume-locked', 'user-valid',
+                'user-invalid'):
             # Not applicable in a static context: never match.
             return '0'
-        elif selector.name == 'root':
+        elif selector.name in ('root', 'scope'):
             return 'el.parent is None'
         elif selector.name == 'first-child':
             return 'el.index == 0'
@@ -272,32 +288,83 @@ def _compile_node(selector):
 
     elif isinstance(selector, parser.FunctionalPseudoClassSelector):
         if selector.name == 'lang':
+            langs = []
             tokens = [
-                t for t in selector.arguments
-                if t.type != 'whitespace'
-            ]
-            if len(tokens) == 1 and tokens[0].type == 'ident':
-                lang = tokens[0].lower_value
-            else:
-                raise SelectorError('Invalid arguments for :lang()')
-
-            return ('el.lang == %r or el.lang.startswith(%r)'
-                    % (lang, lang + '-'))
+                token for token in selector.arguments
+                if token.type not in ('whitespace', 'comment')]
+            while tokens:
+                token = tokens.pop(0)
+                if token.type == 'ident':
+                    langs.append(token.lower_value)
+                elif token.type == 'string':
+                    langs.append(ascii_lower(token.value))
+                else:
+                    raise SelectorError('Invalid arguments for :lang()')
+                if tokens:
+                    token = tokens.pop(0)
+                    if token.type != 'ident' and token.value != ',':
+                        raise SelectorError('Invalid arguments for :lang()')
+            return ' or '.join(
+                f'el.lang == {lang!r} or el.lang.startswith({lang + "-"!r})'
+                for lang in langs)
         else:
-            if selector.name == 'nth-child':
-                count = 'el.index'
-            elif selector.name == 'nth-last-child':
-                count = '(len(el.etree_siblings) - el.index - 1)'
-            elif selector.name == 'nth-of-type':
-                count = ('sum(1 for s in el.etree_siblings[:el.index]'
-                         '    if s.tag == el.etree_element.tag)')
-            elif selector.name == 'nth-last-of-type':
-                count = ('sum(1 for s in el.etree_siblings[el.index + 1:]'
-                         '    if s.tag == el.etree_element.tag)')
-            else:
-                raise SelectorError('Unknown pseudo-class', selector.name)
+            nth = []
+            selector_list = []
+            current_list = nth
+            for argument in selector.arguments:
+                if argument.type == 'ident' and argument.value == 'of':
+                    if current_list is nth:
+                        current_list = selector_list
+                        continue
+                current_list.append(argument)
 
-            result = parse_nth(selector.arguments)
+            if selector_list:
+                test = ' and '.join(
+                    _compile_node(selector.parsed_tree)
+                    for selector in parser.parse(selector_list))
+                if selector.name == 'nth-child':
+                    count = (
+                        'sum(1 for el in el.iter_previous_siblings()'
+                        f'   if ({test}))')
+                elif selector.name == 'nth-last-child':
+                    count = (
+                        'sum(1 for el in'
+                        '    tuple(el.iter_siblings())[el.index + 1:]'
+                        f'   if ({test}))')
+                elif selector.name == 'nth-of-type':
+                    count = (
+                        'sum(1 for s in ('
+                        '      el for el in el.iter_previous_siblings()'
+                        f'     if ({test}))'
+                        '    if s.etree_element.tag == el.etree_element.tag)')
+                elif selector.name == 'nth-last-of-type':
+                    count = (
+                        'sum(1 for s in ('
+                        '      el for el in'
+                        '      tuple(el.iter_siblings())[el.index + 1:]'
+                        f'     if ({test}))'
+                        '    if s.etree_element.tag == el.etree_element.tag)')
+                else:
+                    raise SelectorError('Unknown pseudo-class', selector.name)
+                count += f'if ({test}) else float("nan")'
+            else:
+                if current_list is selector_list:
+                    raise SelectorError(
+                        'Invalid arguments for :%s()' % selector.name)
+                if selector.name == 'nth-child':
+                    count = 'el.index'
+                elif selector.name == 'nth-last-child':
+                    count = 'len(el.etree_siblings) - el.index - 1'
+                elif selector.name == 'nth-of-type':
+                    count = ('sum(1 for s in el.etree_siblings[:el.index]'
+                             '    if s.tag == el.etree_element.tag)')
+                elif selector.name == 'nth-last-of-type':
+                    count = ('sum(1 for s in el.etree_siblings[el.index + 1:]'
+                             '    if s.tag == el.etree_element.tag)')
+                else:
+                    raise SelectorError('Unknown pseudo-class', selector.name)
+
+            result = parse_nth(nth)
             if result is None:
                 raise SelectorError(
                     'Invalid arguments for :%s()' % selector.name)
@@ -309,11 +376,11 @@ def _compile_node(selector):
             B = b - 1
             if a == 0:
                 # x = B
-                return '%s == %i' % (count, B)
+                return '(%s) == %i' % (count, B)
             else:
                 # n = (x - B) / a
                 return ('next(r == 0 and n >= 0'
-                        '     for n, r in [divmod(%s - %i, %i)])'
+                        '     for n, r in [divmod((%s) - %i, %i)])'
                         % (count, B, a))
 
     else:

@@ -52,10 +52,7 @@ valid_selectors = [
     if not set(test.get('exclude', ())) & {'document', 'xhtml'}]
 
 # Mark failing tests
-for failing in (25, 26):
-    invalid_selectors[failing] = pytest.param(
-        invalid_selectors[failing], marks=pytest.mark.xfail)
-for failing in (2, 9, 104, 105, 111, 119, 197, 198):
+for failing in (2, 9, 104, 105, 111, 197, 198):
     valid_selectors[failing] = pytest.param(
         valid_selectors[failing], marks=pytest.mark.xfail)
 
@@ -156,6 +153,12 @@ def test_lang():
     ('*:lang(en-US)', ['second-li', 'li-div']),
     (':lang(En)', ['second-li', 'li-div']),
     (':lang(e)', []),
+    (':lang("en-US")', ['second-li', 'li-div']),
+    pytest.param(
+        ':lang("*-US")', ['second-li', 'li-div'], marks=pytest.mark.xfail),
+    pytest.param(
+        ':lang(\\*-US)', ['second-li', 'li-div'], marks=pytest.mark.xfail),
+    (':lang(en /* English */, fr /* French */)', ['second-li', 'li-div']),
 
     ('li:nth-child(3)', ['third-li']),
     ('li:nth-child(10)', []),
@@ -166,20 +169,27 @@ def test_lang():
     ('li:nth-child(odd)', ['first-li', 'third-li', 'fifth-li', 'seventh-li']),
     ('li:nth-child(2n+4)', ['fourth-li', 'sixth-li']),
     ('li:nth-child(3n+1)', ['first-li', 'fourth-li', 'seventh-li']),
+    ('p > input:nth-child(2n of p input[type=checkbox])', [
+        'checkbox-disabled', 'checkbox-disabled-checked']),
     ('li:nth-last-child(1)', ['seventh-li']),
     ('li:nth-last-child(0)', []),
     ('li:nth-last-child(2n+2)', ['second-li', 'fourth-li', 'sixth-li']),
     ('li:nth-last-child(even)', ['second-li', 'fourth-li', 'sixth-li']),
     ('li:nth-last-child(2n+4)', ['second-li', 'fourth-li']),
+    (':nth-last-child(1 of [type=checkbox])', [
+        'checkbox-disabled-checked', 'checkbox-fieldset-disabled']),
     ('ol:first-of-type', ['first-ol']),
     ('ol:nth-child(1)', []),
     ('ol:nth-of-type(2)', ['second-ol']),
+    (':nth-of-type(1 of .e)', ['tag-anchor', 'first-ol']),
     ('ol:nth-last-of-type(2)', ['first-ol']),
+    (':nth-last-of-type(1 of .e)', ['tag-anchor', 'second-ol']),
     ('span:only-child', ['foobar-span']),
     ('div:only-child', ['li-div']),
     ('div *:only-child', ['li-div', 'foobar-span']),
     ('p *:only-of-type', ['p-em', 'fieldset']),
     ('p:only-of-type', ['paragraph']),
+
     ('a:empty', ['name-anchor']),
     ('a:EMpty', ['name-anchor']),
     ('li:empty', ['third-li', 'fourth-li', 'fifth-li', 'sixth-li']),
@@ -221,6 +231,31 @@ def test_lang():
     ('ol :Not([class])', [
         'first-li', 'second-li', 'li-div',
         'fifth-li', 'sixth-li', 'seventh-li']),
+    ('li:not(:nth-child(odd), #second-li)', ['fourth-li', 'sixth-li']),
+    ('li:not(li)', []),
+    (':is(*)', ALL_IDS),
+    (':is(div)', ['outer-div', 'li-div', 'foobar-div']),
+    (':is(div, fieldset)', ['outer-div', 'li-div', 'fieldset', 'foobar-div']),
+    (':is(:::wrong)', []),
+    (':is(div, :::wrong, fieldset)', [
+        'outer-div', 'li-div', 'fieldset', 'foobar-div']),
+    ('div :is(div, div)', ['li-div']),
+    ('li:is(.c)', ['third-li', 'fourth-li']),
+    ('input:is([type="text"])', ['text-checked']),
+    ('div:is(:not(#outer-div))', ['li-div', 'foobar-div']),
+    ('div:is(div::before)', []),
+    (':where(*)', ALL_IDS),
+    (':where(div)', ['outer-div', 'li-div', 'foobar-div']),
+    (':where(div, fieldset)', [
+        'outer-div', 'li-div', 'fieldset', 'foobar-div']),
+    (':where(:::wrong)', []),
+    (':where(div, :::wrong, fieldset)', [
+        'outer-div', 'li-div', 'fieldset', 'foobar-div']),
+    ('div :where(div, div)', ['li-div']),
+    ('li:where(.c)', ['third-li', 'fourth-li']),
+    ('input:where([type="text"])', ['text-checked']),
+    ('div:where(:not(#outer-div))', ['li-div', 'foobar-div']),
+    ('div:where(div::before)', []),
 
     # Invalid characters in XPath element names, should not crash
     (r'di\a0 v', []),
@@ -229,7 +264,13 @@ def test_lang():
     (r'[h\]ref]', []),
 
     (':link', ['link-href', 'tag-anchor', 'nofollow-anchor', 'area-href']),
+    (':any-link', ['link-href', 'tag-anchor', 'nofollow-anchor', 'area-href']),
+    (':local-link', ['link-href', 'area-href']),
     (':visited', []),
+    (':hover', []),
+    (':active', []),
+    (':focus', []),
+    (':target', []),
     (':enabled', [
         'link-href', 'tag-anchor', 'nofollow-anchor', 'checkbox-unchecked',
         'text-checked', 'input-hidden', 'checkbox-checked', 'area-href']),
