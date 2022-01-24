@@ -155,8 +155,12 @@ def _compile_node(selector):
         return ' or '.join(f'({expr})' for expr in sub_expressions)
 
     elif isinstance(selector, parser.LocalNameSelector):
-        return ('el.local_name == (%r if el.in_html_document else %r)'
-                % (selector.lower_local_name, selector.local_name))
+        if selector.lower_local_name == selector.local_name:
+            return 'el.local_name == %r' % selector.local_name
+        else:
+            return (
+                'el.local_name == (%r if el.in_html_document else %r)' %
+                (selector.lower_local_name, selector.local_name))
 
     elif isinstance(selector, parser.NamespaceSelector):
         return 'el.namespace_url == %r' % selector.namespace
@@ -170,13 +174,19 @@ def _compile_node(selector):
     elif isinstance(selector, parser.AttributeSelector):
         if selector.namespace is not None:
             if selector.namespace:
-                key = '(%r if el.in_html_document else %r)' % (
-                    '{%s}%s' % (selector.namespace, selector.lower_name),
-                    '{%s}%s' % (selector.namespace, selector.name),
-                )
+                if selector.name == selector.lower_name:
+                    key = repr('{%s}%s' % (selector.namespace, selector.name))
+                else:
+                    key = '(%r if el.in_html_document else %r)' % (
+                        '{%s}%s' % (selector.namespace, selector.lower_name),
+                        '{%s}%s' % (selector.namespace, selector.name),
+                    )
             else:
-                key = ('(%r if el.in_html_document else %r)'
-                       % (selector.lower_name, selector.name))
+                if selector.name == selector.lower_name:
+                    key = repr(selector.name)
+                else:
+                    key = '(%r if el.in_html_document else %r)' % (
+                        selector.lower_name, selector.name)
             value = selector.value
             if selector.operator is None:
                 return '%s in el.etree_element.attrib' % key
