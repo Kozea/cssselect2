@@ -84,31 +84,42 @@ class Matcher(object):
         """
         relevant_selectors = []
 
-        if element.id is not None:
-            relevant_selectors.append(self.id_selectors.get(element.id, []))
+        if element.id is not None and element.id in self.id_selectors:
+            self.add_relevant_selectors(
+                element, self.id_selectors[element.id], relevant_selectors)
 
         for class_name in element.classes:
-            relevant_selectors.append(self.class_selectors.get(class_name, []))
+            if class_name in self.class_selectors:
+                self.add_relevant_selectors(
+                    element, self.class_selectors[class_name],
+                    relevant_selectors)
 
-        relevant_selectors.append(
-            self.lower_local_name_selectors.get(
-                ascii_lower(element.local_name), []))
-        relevant_selectors.append(
-            self.namespace_selectors.get(element.namespace_url, []))
+        lower_name = ascii_lower(element.local_name)
+        if lower_name in self.lower_local_name_selectors:
+            self.add_relevant_selectors(
+                element, self.lower_local_name_selectors[lower_name],
+                relevant_selectors)
+        if element.namespace_url in self.namespace_selectors:
+            self.add_relevant_selectors(
+                element, self.namespace_selectors[element.namespace_url],
+                relevant_selectors)
 
         if 'lang' in element.etree_element.attrib:
-            relevant_selectors.append(self.lang_attr_selectors)
+            self.add_relevant_selectors(
+                element, self.lang_attr_selectors, relevant_selectors)
 
-        relevant_selectors.append(self.other_selectors)
+        self.add_relevant_selectors(
+            element, self.other_selectors, relevant_selectors)
 
-        results = [
-            (specificity, order, pseudo, payload)
-            for selector_list in relevant_selectors
-            for test, specificity, order, pseudo, payload in selector_list
-            if test(element)
-        ]
-        results.sort(key=SORT_KEY)
-        return results
+        relevant_selectors.sort(key=SORT_KEY)
+        return relevant_selectors
+
+    @staticmethod
+    def add_relevant_selectors(element, selectors, relevant_selectors):
+        for test, specificity, order, pseudo, payload in selectors:
+            if test(element):
+                relevant_selectors.append(
+                    (specificity, order, pseudo, payload))
 
 
 SORT_KEY = operator.itemgetter(0, 1)
