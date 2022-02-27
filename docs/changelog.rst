@@ -2,6 +2,17 @@ Changelog
 ---------
 
 
+Version 0.5.0
+.............
+
+Released on 2022-02-27.
+
+* Support Python 3.10
+* Drop support of Python 3.6
+* Handle many CSS4 selectors
+* Ignore comments at the beginning of selectors
+
+
 Version 0.4.1
 .............
 
