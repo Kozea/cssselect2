@@ -1,3 +1,5 @@
+from warnings import warn
+
 from webencodings import ascii_lower
 
 from .compiler import compile_selector_list, split_whitespace
@@ -100,6 +102,16 @@ class ElementWrapper(object):
         self.index = index
         self.in_html_document = in_html_document
         self.transport_content_language = content_language
+        #: List of existing :class:`ElementWrapper` objects for this element’s
+        #: ancestors, in reversed tree order, from :attr:`parent` to the root
+        self.ancestors = (
+            [] if self.parent is None else
+            self.parent.ancestors + [self.parent])
+        #: List of existing :class:`ElementWrapper` objects for this element’s
+        #: previous siblings, in reversed tree order.
+        self.previous_siblings = (
+            [] if self.previous is None else
+            self.previous.previous_siblings + [self.previous])
 
     def __eq__(self, other):
         return (type(self) == type(other) and
@@ -123,11 +135,15 @@ class ElementWrapper(object):
         The element itself is not included,
         this is an empty sequence for the root element.
 
+        This method is deprecated and will be removed in version 0.7.0. Use
+        :attr:`ancestors` instead.
+
         """
-        element = self
-        while element.parent is not None:
-            element = element.parent
-            yield element
+        warn(
+            'This method is deprecated and will be removed in version 0.7.0. '
+            'Use the "ancestors" attribute instead.',
+            DeprecationWarning)
+        yield from self.ancestors
 
     def iter_previous_siblings(self):
         """Return an iterator of existing :class:`ElementWrapper` objects
@@ -137,11 +153,15 @@ class ElementWrapper(object):
         The element itself is not included,
         this is an empty sequence for a first child or the root element.
 
+        This method is deprecated and will be removed in version 0.7.0. Use
+        :attr:`previous_siblings` instead.
+
         """
-        element = self
-        while element.previous is not None:
-            element = element.previous
-            yield element
+        warn(
+            'This method is deprecated and will be removed in version 0.7.0. '
+            'Use the "previous_siblings" attribute instead.',
+            DeprecationWarning)
+        yield from self.previous_siblings
 
     def iter_siblings(self):
         """Return an iterator of newly-created :class:`ElementWrapper` objects

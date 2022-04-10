@@ -101,7 +101,7 @@ def _compile_node(selector):
         # Rebind the `el` name inside a generator-expressions (in a new scope)
         # so that 'left_inside' applies to different elements.
         elif selector.combinator == ' ':
-            left = 'any((%s) for el in el.iter_ancestors())' % left_inside
+            left = 'any((%s) for el in el.ancestors)' % left_inside
         elif selector.combinator == '>':
             left = ('next(el is not None and (%s) for el in [el.parent])'
                     % left_inside)
@@ -109,8 +109,7 @@ def _compile_node(selector):
             left = ('next(el is not None and (%s) for el in [el.previous])'
                     % left_inside)
         elif selector.combinator == '~':
-            left = ('any((%s) for el in el.iter_previous_siblings())'
-                    % left_inside)
+            left = 'any((%s) for el in el.previous_siblings)' % left_inside
         else:
             raise SelectorError('Unknown combinator', selector.combinator)
 
@@ -334,8 +333,7 @@ def _compile_node(selector):
                     for selector in parser.parse(selector_list))
                 if selector.name == 'nth-child':
                     count = (
-                        'sum(1 for el in el.iter_previous_siblings()'
-                        f'   if ({test}))')
+                        f'sum(1 for el in el.previous_siblings if ({test}))')
                 elif selector.name == 'nth-last-child':
                     count = (
                         'sum(1 for el in'
@@ -344,7 +342,7 @@ def _compile_node(selector):
                 elif selector.name == 'nth-of-type':
                     count = (
                         'sum(1 for s in ('
-                        '      el for el in el.iter_previous_siblings()'
+                        '      el for el in el.previous_siblings'
                         f'     if ({test}))'
                         '    if s.etree_element.tag == el.etree_element.tag)')
                 elif selector.name == 'nth-last-of-type':
