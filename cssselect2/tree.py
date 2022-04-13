@@ -102,16 +102,10 @@ class ElementWrapper(object):
         self.index = index
         self.in_html_document = in_html_document
         self.transport_content_language = content_language
-        #: List of existing :class:`ElementWrapper` objects for this element’s
-        #: ancestors, in reversed tree order, from :attr:`parent` to the root
-        self.ancestors = (
-            [] if self.parent is None else
-            self.parent.ancestors + [self.parent])
-        #: List of existing :class:`ElementWrapper` objects for this element’s
-        #: previous siblings, in reversed tree order.
-        self.previous_siblings = (
-            [] if self.previous is None else
-            self.previous.previous_siblings + [self.previous])
+
+        # Cache
+        self._ancestors = None
+        self._previous_siblings = None
 
     def __eq__(self, other):
         return (type(self) == type(other) and
@@ -126,6 +120,26 @@ class ElementWrapper(object):
     def __iter__(self):
         for element in self.iter_children():
             yield element
+
+    @property
+    def ancestors(self):
+        """Tuple of existing :class:`ElementWrapper` objects for this element’s
+        ancestors, in reversed tree order, from :attr:`parent` to the root."""
+        if self._ancestors is None:
+            self._ancestors = (
+                () if self.parent is None else
+                self.parent.ancestors + (self.parent,))
+        return self._ancestors
+
+    @property
+    def previous_siblings(self):
+        """Tuple of existing :class:`ElementWrapper` objects for this element’s
+        previous siblings, in reversed tree order."""
+        if self._previous_siblings is None:
+            self._previous_siblings = (
+                () if self.previous is None else
+                self.previous.previous_siblings + (self.previous,))
+        return self._previous_siblings
 
     def iter_ancestors(self):
         """Return an iterator of existing :class:`ElementWrapper` objects
