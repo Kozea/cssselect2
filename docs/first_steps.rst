@@ -1,6 +1,8 @@
 First Steps
 ===========
 
+.. currentmodule:: cssselect2
+
 
 Installation
 ------------
@@ -30,9 +32,9 @@ Basic Example
 Here is a classical cssselect2 workflow:
 
 - parse a CSS stylesheet using tinycss2_,
-- store the CSS rules in a :meth:`Matcher` object,
+- store the CSS rules in a :class:`Matcher` object,
 - parse an HTML document using an ElementTree-like parser,
-- wrap the HTML tree in a :meth:`ElementWrapper` object,
+- wrap the HTML tree in a :class:`ElementWrapper` object,
 - find the CSS rules matching each HTML tag, using the matcher and the wrapper.
 
 .. literalinclude:: example.py
