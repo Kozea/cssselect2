@@ -2,6 +2,18 @@ Changelog
 ---------
 
 
+Version 0.6.0
+.............
+
+Released on 2022-04-15.
+
+**This version deprecates the ``iter_ancestors`` and ``iter_previous_siblings``
+methods, that will be removed in 0.7.0. Use the ``ancestors`` and
+``previous_siblings`` properties instead.**
+
+* Improve speed of ancestors and previous siblings
+
+
 Version 0.5.0
 .............
 
