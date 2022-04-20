@@ -48,7 +48,7 @@ def parse(input, namespaces=None, forgiving=False):
                     raise exception
         else:
             if not forgiving:
-                raise SelectorError(next, f'unpexpected {next.type} token.')
+                raise SelectorError(next, f'unexpected {next.type} token.')
 
 
 def parse_selector(tokens, namespaces):
