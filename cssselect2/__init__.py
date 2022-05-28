@@ -20,7 +20,7 @@ from .tree import ElementWrapper  # noqa
 VERSION = __version__ = '0.6.0'
 
 
-class Matcher(object):
+class Matcher:
     """A CSS selectors storage that can match against HTML elements."""
     def __init__(self):
         self.id_selectors = {}

@@ -5,7 +5,7 @@ from webencodings import ascii_lower
 from .compiler import compile_selector_list, split_whitespace
 
 
-class cached_property(object):
+class cached_property:
     # Borrowed from Werkzeug
     # https://github.com/mitsuhiko/werkzeug/blob/master/werkzeug/utils.py
 
@@ -25,7 +25,7 @@ class cached_property(object):
         return value
 
 
-class ElementWrapper(object):
+class ElementWrapper:
     """
     A wrapper for an ElementTree :class:`xml.etree.ElementTree.Element`
     for Selector matching.
