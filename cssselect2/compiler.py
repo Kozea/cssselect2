@@ -34,7 +34,7 @@ def compile_selector_list(input, namespaces=None):
     ]
 
 
-class CompiledSelector(object):
+class CompiledSelector:
     """Abstract representation of a selector."""
     def __init__(self, parsed_selector):
         source = _compile_node(parsed_selector.parsed_tree)

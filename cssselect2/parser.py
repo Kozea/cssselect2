@@ -263,7 +263,7 @@ class SelectorError(ValueError):
     """A specialized ``ValueError`` for invalid selectors."""
 
 
-class TokenStream(object):
+class TokenStream:
     def __init__(self, tokens):
         self.tokens = iter(tokens)
         self.peeked = []  # In reversed order
@@ -299,7 +299,7 @@ class TokenStream(object):
         return self.skip(['comment', 'whitespace'])
 
 
-class Selector(object):
+class Selector:
     def __init__(self, tree, pseudo_element=None):
         self.parsed_tree = tree
         if pseudo_element is None:
@@ -318,7 +318,7 @@ class Selector(object):
             return '%r::%s' % (self.parsed_tree, self.pseudo_element)
 
 
-class CombinedSelector(object):
+class CombinedSelector:
     def __init__(self, left, combinator, right):
         #: Combined or compound selector
         self.left = left
@@ -337,7 +337,7 @@ class CombinedSelector(object):
         return '%r%s%r' % (self.left, self.combinator, self.right)
 
 
-class CompoundSelector(object):
+class CompoundSelector:
     """Aka. sequence of simple selectors, in Level 3."""
     def __init__(self, simple_selectors):
         self.simple_selectors = simple_selectors
@@ -356,7 +356,7 @@ class CompoundSelector(object):
         return ''.join(map(repr, self.simple_selectors))
 
 
-class LocalNameSelector(object):
+class LocalNameSelector:
     specificity = 0, 0, 1
 
     def __init__(self, local_name):
@@ -366,7 +366,7 @@ class LocalNameSelector(object):
         return self.local_name
 
 
-class NamespaceSelector(object):
+class NamespaceSelector:
     specificity = 0, 0, 0
 
     def __init__(self, namespace):
@@ -381,7 +381,7 @@ class NamespaceSelector(object):
             return '{%s}|' % self.namespace
 
 
-class IDSelector(object):
+class IDSelector:
     specificity = 1, 0, 0
 
     def __init__(self, ident):
@@ -391,7 +391,7 @@ class IDSelector(object):
         return '#' + self.ident
 
 
-class ClassSelector(object):
+class ClassSelector:
     specificity = 0, 1, 0
 
     def __init__(self, class_name):
@@ -401,7 +401,7 @@ class ClassSelector(object):
         return '.' + self.class_name
 
 
-class AttributeSelector(object):
+class AttributeSelector:
     specificity = 0, 1, 0
 
     def __init__(self, namespace, name, operator, value):
@@ -418,7 +418,7 @@ class AttributeSelector(object):
         return '[%s%s%s%r]' % (namespace, self.name, self.operator, self.value)
 
 
-class PseudoClassSelector(object):
+class PseudoClassSelector:
     specificity = 0, 1, 0
 
     def __init__(self, name):
@@ -428,7 +428,7 @@ class PseudoClassSelector(object):
         return ':' + self.name
 
 
-class FunctionalPseudoClassSelector(object):
+class FunctionalPseudoClassSelector:
     specificity = 0, 1, 0
 
     def __init__(self, name, arguments):
