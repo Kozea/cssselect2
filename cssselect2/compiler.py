@@ -138,16 +138,37 @@ def _compile_node(selector):
 
     elif isinstance(selector, parser.NegationSelector):
         sub_expressions = [
-            expr for expr in map(_compile_node, selector.selector_list)
+            expr for expr in [
+                _compile_node(selector.parsed_tree)
+                for selector in selector.selector_list]
             if expr != '1']
         if not sub_expressions:
             return '0'
         return f'not ({" or ".join(f"({expr})" for expr in sub_expressions)})'
 
+    elif isinstance(selector, parser.RelationalSelector):
+        sub_expressions = []
+        for relative_selector in selector.selector_list:
+            expression = _compile_node(relative_selector.selector.parsed_tree)
+            if expression == '0':
+                continue
+            if relative_selector.combinator == ' ':
+                elements = 'list(el.iter_subtree())[1:]'
+            elif relative_selector.combinator == '>':
+                elements = 'el.iter_children()'
+            elif relative_selector.combinator == '+':
+                elements = 'list(el.iter_next_siblings())[:1]'
+            elif relative_selector.combinator == '~':
+                elements = 'el.iter_next_siblings()'
+            sub_expressions.append(f'(any({expression} for el in {elements}))')
+        return ' or '.join(sub_expressions)
+
     elif isinstance(selector, (
             parser.MatchesAnySelector, parser.SpecificityAdjustmentSelector)):
         sub_expressions = [
-            expr for expr in map(_compile_node, selector.selector_list)
+            expr for expr in [
+                _compile_node(selector.parsed_tree)
+                for selector in selector.selector_list]
             if expr != '0']
         if not sub_expressions:
             return '0'

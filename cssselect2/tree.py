@@ -187,6 +187,18 @@ class ElementWrapper:
         else:
             yield from self.parent.iter_children()
 
+    def iter_next_siblings(self):
+        """Return an iterator of newly-created :class:`ElementWrapper` objects
+        for this element’s next siblings, in tree order.
+
+        """
+        found = False
+        for sibling in self.iter_siblings():
+            if found:
+                yield sibling
+            if sibling == self:
+                found = True
+
     def iter_children(self):
         """Return an iterator of newly-created :class:`ElementWrapper` objects
         for this element’s child elements,

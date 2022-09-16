@@ -20,7 +20,7 @@ SUPPORTED_PSEUDO_ELEMENTS = {
 }
 
 
-def parse(input, namespaces=None, forgiving=False):
+def parse(input, namespaces=None, forgiving=False, relative=False):
     """Yield tinycss2 selectors found in given ``input``.
 
     :param input:
@@ -32,7 +32,7 @@ def parse(input, namespaces=None, forgiving=False):
     tokens = TokenStream(input)
     namespaces = namespaces or {}
     try:
-        yield parse_selector(tokens, namespaces)
+        yield parse_selector(tokens, namespaces, relative)
     except SelectorError as exception:
         if not forgiving:
             raise exception
@@ -42,7 +42,7 @@ def parse(input, namespaces=None, forgiving=False):
             return
         elif next == ',':
             try:
-                yield parse_selector(tokens, namespaces)
+                yield parse_selector(tokens, namespaces, relative)
             except SelectorError as exception:
                 if not forgiving:
                     raise exception
@@ -51,25 +51,36 @@ def parse(input, namespaces=None, forgiving=False):
                 raise SelectorError(next, f'unexpected {next.type} token.')
 
 
-def parse_selector(tokens, namespaces):
+def parse_selector(tokens, namespaces, relative=False):
     tokens.skip_whitespace_and_comment()
+    if relative:
+        peek = tokens.peek()
+        if peek in ('>', '+', '~'):
+            initial_combinator = peek.value
+            tokens.next()
+        else:
+            initial_combinator = ' '
+        tokens.skip_whitespace_and_comment()
     result, pseudo_element = parse_compound_selector(tokens, namespaces)
     while 1:
         has_whitespace = tokens.skip_whitespace()
         while tokens.skip_comment():
             has_whitespace = tokens.skip_whitespace() or has_whitespace
+        selector = Selector(result, pseudo_element)
+        if relative:
+            selector = RelativeSelector(initial_combinator, selector)
         if pseudo_element is not None:
-            return Selector(result, pseudo_element)
+            return selector
         peek = tokens.peek()
         if peek is None or peek == ',':
-            return Selector(result, pseudo_element)
+            return selector
         elif peek in ('>', '+', '~'):
             combinator = peek.value
             tokens.next()
         elif has_whitespace:
             combinator = ' '
         else:
-            return Selector(result, pseudo_element)
+            return selector
         compound, pseudo_element = parse_compound_selector(tokens, namespaces)
         result = CombinedSelector(result, combinator, compound)
 
@@ -147,7 +158,7 @@ def parse_simple_selector(tokens, namespaces):
                 return PseudoClassSelector(name), None
         elif next is not None and next.type == 'function':
             name = next.lower_name
-            if name in ('is', 'where', 'not'):
+            if name in ('is', 'where', 'not', 'has'):
                 return parse_logical_combination(next, namespaces, name), None
             else:
                 return (
@@ -160,6 +171,7 @@ def parse_simple_selector(tokens, namespaces):
 
 def parse_logical_combination(matches_any_token, namespaces, name):
     forgiving = True
+    relative = False
     if name == 'is':
         selector_class = MatchesAnySelector
     elif name == 'where':
@@ -167,9 +179,13 @@ def parse_logical_combination(matches_any_token, namespaces, name):
     elif name == 'not':
         forgiving = False
         selector_class = NegationSelector
+    elif name == 'has':
+        relative = True
+        selector_class = RelationalSelector
+
     selectors = [
-        selector.parsed_tree for selector in
-        parse(matches_any_token.arguments, namespaces, forgiving=forgiving)
+        selector for selector in
+        parse(matches_any_token.arguments, namespaces, forgiving, relative)
         if selector.pseudo_element is None]
     return selector_class(selectors)
 
@@ -318,6 +334,25 @@ class Selector:
             return '%r::%s' % (self.parsed_tree, self.pseudo_element)
 
 
+class RelativeSelector:
+    def __init__(self, combinator, selector):
+        self.combinator = combinator
+        self.selector = selector
+
+    @property
+    def specificity(self):
+        return self.selector.specificity
+
+    @property
+    def pseudo_element(self):
+        return self.selector.pseudo_element
+
+    def __repr__(self):
+        return (
+            f'{self.selector!r}' if self.combinator == ' '
+            else f'{self.combinator} {self.selector!r}')
+
+
 class CombinedSelector:
     def __init__(self, left, combinator, right):
         #: Combined or compound selector
@@ -452,6 +487,21 @@ class NegationSelector:
 
     def __repr__(self):
         return f':not({", ".join(repr(sel) for sel in self.selector_list)})'
+
+
+class RelationalSelector:
+    def __init__(self, selector_list):
+        self.selector_list = selector_list
+
+    @property
+    def specificity(self):
+        if self.selector_list:
+            return max(selector.specificity for selector in self.selector_list)
+        else:
+            return (0, 0, 0)
+
+    def __repr__(self):
+        return f':has({", ".join(repr(sel) for sel in self.selector_list)})'
 
 
 class MatchesAnySelector:
