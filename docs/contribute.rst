@@ -43,11 +43,19 @@ Tests
 Tests are stored in the ``tests`` folder at the top of the repository. They use
 the `pytest`_ library.
 
-You can launch tests (with code coverage and lint) using the following command::
+You can launch tests using the following command::
 
   venv/bin/python -m pytest
 
+cssselect2 also uses isort_ to check imports and flake8_ to check the coding
+style::
+
+  venv/bin/python -m isort . --check --diff
+  venv/bin/python -m flake8 --exclude tests/css-parsing-tests
+
 .. _pytest: https://docs.pytest.org/
+.. _isort: https://pycqa.github.io/isort/
+.. _flake8: https://flake8.pycqa.org/
 
 
 Documentation
@@ -60,8 +68,7 @@ You can build the documentation using the following command::
 
   venv/bin/sphinx-build docs docs/_build
 
-The documentation home page can now be found in the
-``/path/to/cssselect2/docs/_build/index.html`` file. You can open this file in a
-browser to see the final rendering.
+The documentation home page can now be found in the ``docs/_build/index.html``
+file. You can open this file in a browser to see the final rendering.
 
 .. _Sphinx: https://www.sphinx-doc.org/
