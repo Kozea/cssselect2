@@ -1,43 +1,45 @@
+import functools
 from warnings import warn
 
 from webencodings import ascii_lower
 
 from .compiler import compile_selector_list, split_whitespace
 
+if hasattr(functools, 'cached_property'):
+    # Python 3.8+
+    cached_property = functools.cached_property
+else:
+    # Python 3.7
+    class cached_property:
+        # Borrowed from Werkzeug
+        # https://github.com/mitsuhiko/werkzeug/blob/master/werkzeug/utils.py
 
-class cached_property:
-    # Borrowed from Werkzeug
-    # https://github.com/mitsuhiko/werkzeug/blob/master/werkzeug/utils.py
+        def __init__(self, func, name=None, doc=None):
+            self.__name__ = name or func.__name__
+            self.__module__ = func.__module__
+            self.__doc__ = doc or func.__doc__
+            self.func = func
 
-    def __init__(self, func, name=None, doc=None):
-        self.__name__ = name or func.__name__
-        self.__module__ = func.__module__
-        self.__doc__ = doc or func.__doc__
-        self.func = func
-
-    def __get__(self, obj, type=None, __missing=object()):
-        if obj is None:
-            return self
-        value = obj.__dict__.get(self.__name__, __missing)
-        if value is __missing:
-            value = self.func(obj)
-            obj.__dict__[self.__name__] = value
-        return value
+        def __get__(self, obj, type=None, __missing=object()):
+            if obj is None:
+                return self
+            value = obj.__dict__.get(self.__name__, __missing)
+            if value is __missing:
+                value = self.func(obj)
+                obj.__dict__[self.__name__] = value
+            return value
 
 
 class ElementWrapper:
-    """
-    A wrapper for an ElementTree :class:`xml.etree.ElementTree.Element`
-    for Selector matching.
+    """Wrapper of :class:`xml.etree.ElementTree.Element` for Selector matching.
 
-    This class should not be instanciated directly.
-    :meth:`from_xml_root` or :meth:`from_html_root` should be used
-    for the root element of a document,
-    and other elements should be accessed (and wrappers generated)
-    using methods such as :meth:`iter_children` and :meth:`iter_subtree`.
+    This class should not be instanciated directly. :meth:`from_xml_root` or
+    :meth:`from_html_root` should be used for the root element of a document,
+    and other elements should be accessed (and wrappers generated) using
+    methods such as :meth:`iter_children` and :meth:`iter_subtree`.
 
-    :class:`ElementWrapper` objects compare equal
-    if their underlying :class:`xml.etree.ElementTree.Element` do.
+    :class:`ElementWrapper` objects compare equal if their underlying
+    :class:`xml.etree.ElementTree.Element` do.
 
     """
     @classmethod
@@ -61,12 +63,10 @@ class ElementWrapper:
 
     @classmethod
     def from_html_root(cls, root, content_language=None):
-        """Same as :meth:`from_xml_root`, but for documents parsed with an HTML parser
-        like html5lib, which should be the case of documents with the
-        ``text/html`` MIME type.
+        """Same as :meth:`from_xml_root` with case-insensitive attribute names.
 
-        Compared to :meth:`from_xml_root`,
-        this makes element attribute names in Selectors case-insensitive.
+        Useful for documents parsed with an HTML parser like html5lib, which
+        should be the case of documents with the ``text/html`` MIME type.
 
         """
         return cls._from_root(root, content_language, in_html_document=True)
@@ -75,9 +75,10 @@ class ElementWrapper:
     def _from_root(cls, root, content_language, in_html_document=True):
         if hasattr(root, 'getroot'):
             root = root.getroot()
-        return cls(root, parent=None, index=0, previous=None,
-                   in_html_document=in_html_document,
-                   content_language=content_language)
+        return cls(
+            root, parent=None, index=0, previous=None,
+            in_html_document=in_html_document,
+            content_language=content_language)
 
     def __init__(self, etree_element, parent, index, previous,
                  in_html_document, content_language=None):
@@ -108,8 +109,9 @@ class ElementWrapper:
         self._previous_siblings = None
 
     def __eq__(self, other):
-        return (type(self) == type(other) and
-                self.etree_element == other.etree_element)
+        return (
+            type(self) == type(other) and
+            self.etree_element == other.etree_element)
 
     def __ne__(self, other):
         return not (self == other)
@@ -118,13 +120,16 @@ class ElementWrapper:
         return hash((type(self), self.etree_element))
 
     def __iter__(self):
-        for element in self.iter_children():
-            yield element
+        yield from self.iter_children()
 
     @property
     def ancestors(self):
-        """Tuple of existing :class:`ElementWrapper` objects for this element’s
-        ancestors, in reversed tree order, from :attr:`parent` to the root."""
+        """Tuple of existing ancestors.
+
+        Tuple of existing :class:`ElementWrapper` objects for this element’s
+        ancestors, in reversed tree order, from :attr:`parent` to the root.
+
+        """
         if self._ancestors is None:
             self._ancestors = (
                 () if self.parent is None else
@@ -133,8 +138,12 @@ class ElementWrapper:
 
     @property
     def previous_siblings(self):
-        """Tuple of existing :class:`ElementWrapper` objects for this element’s
-        previous siblings, in reversed tree order."""
+        """Tuple of previous siblings.
+
+        Tuple of existing :class:`ElementWrapper` objects for this element’s
+        previous siblings, in reversed tree order.
+
+        """
         if self._previous_siblings is None:
             self._previous_siblings = (
                 () if self.previous is None else
@@ -142,12 +151,14 @@ class ElementWrapper:
         return self._previous_siblings
 
     def iter_ancestors(self):
-        """Return an iterator of existing :class:`ElementWrapper` objects
-        for this element’s ancestors,
-        in reversed tree order (from :attr:`parent` to the root)
+        """Iterate over ancestors.
 
-        The element itself is not included,
-        this is an empty sequence for the root element.
+        Return an iterator of existing :class:`ElementWrapper` objects for this
+        element’s ancestors, in reversed tree order (from :attr:`parent` to the
+        root).
+
+        The element itself is not included, this is an empty sequence for the
+        root element.
 
         This method is deprecated and will be removed in version 0.7.0. Use
         :attr:`ancestors` instead.
@@ -160,12 +171,13 @@ class ElementWrapper:
         yield from self.ancestors
 
     def iter_previous_siblings(self):
-        """Return an iterator of existing :class:`ElementWrapper` objects
-        for this element’s previous siblings,
-        in reversed tree order.
+        """Iterate over previous siblings.
 
-        The element itself is not included,
-        this is an empty sequence for a first child or the root element.
+        Return an iterator of existing :class:`ElementWrapper` objects for this
+        element’s previous siblings, in reversed tree order.
+
+        The element itself is not included, this is an empty sequence for a
+        first child or the root element.
 
         This method is deprecated and will be removed in version 0.7.0. Use
         :attr:`previous_siblings` instead.
@@ -178,8 +190,10 @@ class ElementWrapper:
         yield from self.previous_siblings
 
     def iter_siblings(self):
-        """Return an iterator of newly-created :class:`ElementWrapper` objects
-        for this element’s siblings, in tree order.
+        """Iterate over siblings.
+
+        Return an iterator of newly-created :class:`ElementWrapper` objects for
+        this element’s siblings, in tree order.
 
         """
         if self.parent is None:
@@ -188,8 +202,10 @@ class ElementWrapper:
             yield from self.parent.iter_children()
 
     def iter_next_siblings(self):
-        """Return an iterator of newly-created :class:`ElementWrapper` objects
-        for this element’s next siblings, in tree order.
+        """Iterate over next siblings.
+
+        Return an iterator of newly-created :class:`ElementWrapper` objects for
+        this element’s next siblings, in tree order.
 
         """
         found = False
@@ -200,26 +216,24 @@ class ElementWrapper:
                 found = True
 
     def iter_children(self):
-        """Return an iterator of newly-created :class:`ElementWrapper` objects
-        for this element’s child elements,
-        in tree order.
+        """Iterate over children.
+
+        Return an iterator of newly-created :class:`ElementWrapper` objects for
+        this element’s child elements, in tree order.
 
         """
         child = None
         for i, etree_child in enumerate(self.etree_children):
             child = type(self)(
-                etree_child,
-                parent=self,
-                index=i,
-                previous=child,
-                in_html_document=self.in_html_document,
-            )
+                etree_child, parent=self, index=i, previous=child,
+                in_html_document=self.in_html_document)
             yield child
 
     def iter_subtree(self):
-        """Return an iterator of newly-created :class:`ElementWrapper` objects
-        for the entire subtree rooted at this element,
-        in tree order.
+        """Iterate over subtree.
+
+        Return an iterator of newly-created :class:`ElementWrapper` objects for
+        the entire subtree rooted at this element, in tree order.
 
         Unlike in other methods, the element itself *is* included.
 
@@ -247,11 +261,9 @@ class ElementWrapper:
             for selector in selectors
             for compiled_selector in (
                 [selector] if hasattr(selector, 'test')
-                else compile_selector_list(selector)
-            )
+                else compile_selector_list(selector))
             if compiled_selector.pseudo_element is None and
-            not compiled_selector.never_matches
-        ]
+            not compiled_selector.never_matches]
 
     def matches(self, *selectors):
         """Return wether this elememt matches any of the given selectors.
@@ -264,8 +276,7 @@ class ElementWrapper:
         return any(test(self) for test in self._compile(selectors))
 
     def query_all(self, *selectors):
-        """
-        Return elements, in tree order, that match any of the given selectors.
+        """Return elements, in tree order, that match any of given selectors.
 
         Selectors are `scoped`_ to the subtree rooted at this element.
 
@@ -283,16 +294,13 @@ class ElementWrapper:
             return filter(tests[0], self.iter_subtree())
         elif selectors:
             return (
-                element
-                for element in self.iter_subtree()
-                if any(test(element) for test in tests)
-            )
+                element for element in self.iter_subtree()
+                if any(test(element) for test in tests))
         else:
             return iter(())
 
     def query(self, *selectors):
-        """Return the first element (in tree order)
-        that matches any of the given selectors.
+        """Return first element that matches any of given selectors.
 
         :param selectors:
             Each given selector is either a :class:`compiler.CompiledSelector`,
@@ -306,8 +314,7 @@ class ElementWrapper:
 
     @cached_property
     def etree_children(self):
-        """This element’s children,
-        as a list of ElementTree :class:`xml.etree.ElementTree.Element`.
+        """Children as a list of :class:`xml.etree.ElementTree.Element`.
 
         Other ElementTree nodes such as
         :func:`comments <xml.etree.ElementTree.Comment>` and
@@ -316,7 +323,9 @@ class ElementWrapper:
         are not included.
 
         """
-        return [c for c in self.etree_element if isinstance(c.tag, str)]
+        return [
+            element for element in self.etree_element
+            if isinstance(element.tag, str)]
 
     @cached_property
     def local_name(self):
@@ -378,25 +387,24 @@ class ElementWrapper:
     def in_disabled_fieldset(self):
         if self.parent is None:
             return False
-        if (self.parent.etree_element.tag == (
-                '{http://www.w3.org/1999/xhtml}fieldset') and
+        fieldset = '{http://www.w3.org/1999/xhtml}fieldset'
+        legend = '{http://www.w3.org/1999/xhtml}legend'
+        disabled_fieldset = (
+            self.parent.etree_element.tag == fieldset and
             self.parent.etree_element.get('disabled') is not None and (
-                self.etree_element.tag != (
-                    '{http://www.w3.org/1999/xhtml}legend') or
-                any(s.etree_element.tag == (
-                    '{http://www.w3.org/1999/xhtml}legend')
-                    for s in self.iter_previous_siblings()))):
-            return True
-        return self.parent.in_disabled_fieldset
+                self.etree_element.tag != legend or any(
+                    sibling.etree_element.tag == legend
+                    for sibling in self.iter_previous_siblings())))
+        return disabled_fieldset or self.parent.in_disabled_fieldset
 
 
 def _split_etree_tag(tag):
-    pos = tag.rfind('}')
-    if pos == -1:
+    position = tag.rfind('}')
+    if position == -1:
         return '', tag
     else:
         assert tag[0] == '{'
-        return tag[1:pos], tag[pos + 1:]
+        return tag[1:position], tag[position+1:]
 
 
 def _parse_content_language(value):

@@ -1,8 +1,6 @@
-"""
-cssselect2
-==========
+"""CSS4 selectors for Python.
 
-cssselect2 is a straightforward implementation of CSS3 Selectors for markup
+cssselect2 is a straightforward implementation of CSS4 Selectors for markup
 documents (HTML, XML, etc.) that can be read by ElementTree-like parsers
 (including cElementTree, lxml, html5lib, etc.)
 
@@ -56,14 +54,14 @@ class Matcher:
         if selector.id is not None:
             self.id_selectors.setdefault(selector.id, []).append(entry)
         elif selector.class_name is not None:
-            self.class_selectors.setdefault(selector.class_name, []) \
-                .append(entry)
+            self.class_selectors.setdefault(
+                selector.class_name, []).append(entry)
         elif selector.local_name is not None:
             self.lower_local_name_selectors.setdefault(
                 selector.lower_local_name, []).append(entry)
         elif selector.namespace is not None:
-            self.namespace_selectors.setdefault(selector.namespace, []) \
-                .append(entry)
+            self.namespace_selectors.setdefault(
+                selector.namespace, []).append(entry)
         elif selector.requires_lang_attr:
             self.lang_attr_selectors.append(entry)
         else:

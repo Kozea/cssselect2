@@ -1,9 +1,3 @@
-"""
-
-A parser for CSS selectors, based on the tinycss2 tokenizer.
-
-"""
-
 from tinycss2 import parse_component_value_list
 
 __all__ = ['parse']
@@ -96,13 +90,12 @@ def parse_compound_selector(tokens, namespaces):
             break
         simple_selectors.append(simple_selector)
 
-    if (simple_selectors or type_selectors is not None or
-            pseudo_element is not None):
+    if simple_selectors or (type_selectors, pseudo_element) != (None, None):
         return CompoundSelector(simple_selectors), pseudo_element
-    else:
-        peek = tokens.peek()
-        raise SelectorError(peek, 'expected a compound selector, got %s'
-                            % (peek.type if peek else 'EOF'))
+
+    peek = tokens.peek()
+    peek_type = peek.type if peek else 'EOF'
+    raise SelectorError(peek, f'expected a compound selector, got {peek_type}')
 
 
 def parse_type_selector(tokens, namespaces):
@@ -131,8 +124,7 @@ def parse_simple_selector(tokens, namespaces):
         tokens.next()
         next = tokens.next()
         if next is None or next.type != 'ident':
-            raise SelectorError(
-                next, 'Expected a class name, got %s' % next)
+            raise SelectorError(next, f'Expected a class name, got {next}')
         return ClassSelector(next.value), None
     elif peek.type == '[] block':
         tokens.next()
@@ -145,7 +137,7 @@ def parse_simple_selector(tokens, namespaces):
             next = tokens.next()
             if next is None or next.type != 'ident':
                 raise SelectorError(
-                    next, 'Expected a pseudo-element name, got %s' % next)
+                    next, f'Expected a pseudo-element name, got {next}')
             value = next.lower_value
             if value not in SUPPORTED_PSEUDO_ELEMENTS:
                 raise SelectorError(
@@ -165,7 +157,7 @@ def parse_simple_selector(tokens, namespaces):
                 return (
                     FunctionalPseudoClassSelector(name, next.arguments), None)
         else:
-            raise SelectorError(next, 'unexpected %s token.' % next)
+            raise SelectorError(next, f'unexpected {next} token.')
     else:
         return None, None
 
@@ -197,8 +189,7 @@ def parse_attribute_selector(tokens, namespaces):
         tokens, namespaces, is_attribute=True)
     if qualified_name is None:
         next = tokens.next()
-        raise SelectorError(
-            next, 'expected attribute name, got %s' % next)
+        raise SelectorError(next, f'expected attribute name, got {next}')
     namespace, local_name = qualified_name
 
     tokens.skip_whitespace()
@@ -214,16 +205,16 @@ def parse_attribute_selector(tokens, namespaces):
         if next is None or next.type not in ('ident', 'string'):
             next_type = 'None' if next is None else next.type
             raise SelectorError(
-                next, 'expected attribute value, got %s' % next_type)
+                next, f'expected attribute value, got {next_type}')
         value = next.value
     else:
         raise SelectorError(
-            peek, 'expected attribute selector operator, got %s' % peek)
+            peek, f'expected attribute selector operator, got {peek}')
 
     tokens.skip_whitespace()
     next = tokens.next()
     if next is not None:
-        raise SelectorError(next, 'expected ], got %s' % next.type)
+        raise SelectorError(next, f'expected ], got {next.type}')
     return AttributeSelector(namespace, local_name, operator, value)
 
 
@@ -249,14 +240,14 @@ def parse_qualified_name(tokens, namespaces, is_attribute=False):
         if namespace is None:
             raise SelectorError(
                 first_ident,
-                'undefined namespace prefix: ' + first_ident.value)
+                f'undefined namespace prefix: {first_ident.value}')
     elif peek == '*':
         next = tokens.next()
         peek = tokens.peek()
         if peek != '|':
             if is_attribute:
                 raise SelectorError(
-                    next, 'Expected local name, got %s' % next.type)
+                    next, f'expected local name, got {next.type}')
             return namespaces.get(None, None), None
         tokens.next()
         namespace = None
@@ -273,7 +264,7 @@ def parse_qualified_name(tokens, namespaces, is_attribute=False):
     elif next == '*' and not is_attribute:
         return namespace, None
     else:
-        raise SelectorError(next, 'Expected local name, got %s' % next.type)
+        raise SelectorError(next, f'expected local name, got {next.type}')
 
 
 class SelectorError(ValueError):
@@ -319,20 +310,17 @@ class TokenStream:
 class Selector:
     def __init__(self, tree, pseudo_element=None):
         self.parsed_tree = tree
+        self.pseudo_element = pseudo_element
         if pseudo_element is None:
-            self.pseudo_element = pseudo_element
             #: Tuple of 3 integers: http://www.w3.org/TR/selectors/#specificity
             self.specificity = tree.specificity
         else:
-            self.pseudo_element = pseudo_element
             a, b, c = tree.specificity
             self.specificity = a, b, c + 1
 
     def __repr__(self):
-        if self.pseudo_element is None:
-            return repr(self.parsed_tree)
-        else:
-            return '%r::%s' % (self.parsed_tree, self.pseudo_element)
+        pseudo = f'::{self.pseudo_element}' if self.pseudo_element else ''
+        return f'{self.parsed_tree!r}{pseudo}'
 
 
 class RelativeSelector:
@@ -370,11 +358,10 @@ class CombinedSelector:
         return a1 + a2, b1 + b2, c1 + c2
 
     def __repr__(self):
-        return '%r%s%r' % (self.left, self.combinator, self.right)
+        return f'{self.left!r}{self.combinator}{self.right!r}'
 
 
 class CompoundSelector:
-    """Aka. sequence of simple selectors, in Level 3."""
     def __init__(self, simple_selectors):
         self.simple_selectors = simple_selectors
 
@@ -414,7 +401,7 @@ class NamespaceSelector:
         if self.namespace == '':
             return '|'
         else:
-            return '{%s}|' % self.namespace
+            return f'{{{self.namespace}}}|'
 
 
 class IDSelector:
@@ -424,7 +411,7 @@ class IDSelector:
         self.ident = ident
 
     def __repr__(self):
-        return '#' + self.ident
+        return f'#{self.ident}'
 
 
 class ClassSelector:
@@ -434,7 +421,7 @@ class ClassSelector:
         self.class_name = class_name
 
     def __repr__(self):
-        return '.' + self.class_name
+        return f'.{self.class_name}'
 
 
 class AttributeSelector:
@@ -449,9 +436,8 @@ class AttributeSelector:
         self.value = value
 
     def __repr__(self):
-        namespace = ('*|' if self.namespace is None
-                     else '{%s}' % self.namespace)
-        return '[%s%s%s%r]' % (namespace, self.name, self.operator, self.value)
+        namespace = '*|' if self.namespace is None else f'{{{self.namespace}}}'
+        return f'[{namespace}{self.name}{self.operator}{self.value!r}]'
 
 
 class PseudoClassSelector:
@@ -472,7 +458,7 @@ class FunctionalPseudoClassSelector:
         self.arguments = arguments
 
     def __repr__(self):
-        return ':%s%r' % (self.name, tuple(self.arguments))
+        return f':{self.name}{tuple(self.arguments)!r}'
 
 
 class NegationSelector:
