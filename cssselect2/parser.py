@@ -34,8 +34,9 @@ def parse(input, namespaces=None, forgiving=False, relative=False):
     try:
         yield parse_selector(tokens, namespaces, relative)
     except SelectorError as exception:
-        if not forgiving:
-            raise exception
+        if forgiving:
+            return
+        raise exception
     while 1:
         next = tokens.next()
         if next is None:
