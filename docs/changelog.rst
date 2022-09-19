@@ -2,6 +2,14 @@ Changelog
 ---------
 
 
+Version 0.7.0
+.............
+
+Released on 2022-09-19.
+
+* Support :has selector
+
+
 Version 0.6.0
 .............
 
