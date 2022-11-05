@@ -142,6 +142,22 @@ def test_lang():
     ('[foobar~=" \t"]', []),
     ('div[foobar~="cd"]', []),
 
+    ('a[rel="tAg"]', []),
+    ('a[rel="tAg" s]', []),
+    ('a[rel="tAg" i]', ['tag-anchor']),
+    ('a[href*="localHOST"]', []),
+    ('a[href*="localHOST" s]', []),
+    ('a[href*="localHOST" i]', ['tag-anchor']),
+    ('a[href^="hTtp"]', []),
+    ('a[href^="hTtp" s]', []),
+    ('a[href^="hTtp" i]', ['tag-anchor', 'nofollow-anchor']),
+    ('a[href$="Org"]', []),
+    ('a[href$="Org" S]', []),
+    ('a[href$="Org" I]', ['nofollow-anchor']),
+    ('div[foobar~="BC"]', []),
+    ('div[foobar~="BC" s]', []),
+    ('div[foobar~="BC" i]', ['foobar-div']),
+
     # Attribute values are case sensitive…
     ('*[lang|="En"]', ['second-li']),
     ('[lang|="En-us"]', ['second-li']),

@@ -213,9 +213,16 @@ def parse_attribute_selector(tokens, namespaces):
 
     tokens.skip_whitespace()
     next = tokens.next()
+    case_sensitive = None
     if next is not None:
-        raise SelectorError(next, f'expected ], got {next.type}')
-    return AttributeSelector(namespace, local_name, operator, value)
+        if next.type == 'ident' and next.value.lower() == 'i':
+            case_sensitive = False
+        elif next.type == 'ident' and next.value.lower() == 's':
+            case_sensitive = True
+        else:
+            raise SelectorError(next, f'expected ], got {next.type}')
+    return AttributeSelector(
+        namespace, local_name, operator, value, case_sensitive)
 
 
 def parse_qualified_name(tokens, namespaces, is_attribute=False):
@@ -427,17 +434,25 @@ class ClassSelector:
 class AttributeSelector:
     specificity = 0, 1, 0
 
-    def __init__(self, namespace, name, operator, value):
+    def __init__(self, namespace, name, operator, value, case_sensitive):
         self.namespace = namespace
         self.name, self.lower_name = name
         #: A string like ``=`` or ``~=``, or None for ``[attr]`` selectors
         self.operator = operator
         #: A string, or None for ``[attr]`` selectors
         self.value = value
+        #: ``True`` if case-sensitive, ``False`` if case-insensitive, ``None``
+        #: if depends on the document language
+        self.case_sensitive = case_sensitive
 
     def __repr__(self):
         namespace = '*|' if self.namespace is None else f'{{{self.namespace}}}'
-        return f'[{namespace}{self.name}{self.operator}{self.value!r}]'
+        case_sensitive = (
+            '' if self.case_sensitive is None else
+            f' {"s" if self.case_sensitive else "i"}')
+        return (
+            f'[{namespace}{self.name}{self.operator}{self.value!r}'
+            f'{case_sensitive}]')
 
 
 class PseudoClassSelector:

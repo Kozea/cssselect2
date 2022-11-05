@@ -209,41 +209,35 @@ def _compile_node(selector):
                     lower, name = selector.lower_name, selector.name
                     key = f'({lower!r} if el.in_html_document else {name!r})'
             value = selector.value
+            attribute_value = f'el.etree_element.get({key}, "")'
+            if selector.case_sensitive is False:
+                value = value.lower()
+                attribute_value += '.lower()'
             if selector.operator is None:
                 return f'{key} in el.etree_element.attrib'
             elif selector.operator == '=':
-                return f'el.etree_element.get({key}) == {value!r}'
+                return (
+                    f'{key} in el.etree_element.attrib and '
+                    f'{attribute_value} == {value!r}')
             elif selector.operator == '~=':
-                if len(value.split()) != 1 or value.strip() != value:
-                    return '0'
-                else:
-                    return (
-                        f'{value!r} in '
-                        f'split_whitespace(el.etree_element.get({key}, ""))')
+                return (
+                    '0' if len(value.split()) != 1 or value.strip() != value
+                    else f'{value!r} in split_whitespace({attribute_value})')
             elif selector.operator == '|=':
                 return (
-                    f'next(v == {value!r} or '
-                    f'     (v is not None and v.startswith({(value + "-")!r}))'
-                    f'     for v in [el.etree_element.get({key})])')
+                    f'{key} in el.etree_element.attrib and '
+                    f'{attribute_value} == {value!r} or '
+                    f'{attribute_value}.startswith({(value + "-")!r})')
             elif selector.operator == '^=':
                 if value:
-                    return (
-                        f'el.etree_element.get({key}, "")'
-                        f'.startswith({value!r})')
+                    return f'{attribute_value}.startswith({value!r})'
                 else:
                     return '0'
             elif selector.operator == '$=':
-                if value:
-                    return (
-                        f'el.etree_element.get({key}, "")'
-                        f'.endswith({value!r})')
-                else:
-                    return '0'
+                return (
+                    f'{attribute_value}.endswith({value!r})' if value else '0')
             elif selector.operator == '*=':
-                if value:
-                    return f'{value!r} in el.etree_element.get({key}, "")'
-                else:
-                    return '0'
+                return f'{value!r} in {attribute_value}' if value else '0'
             else:
                 raise SelectorError(
                     'Unknown attribute operator', selector.operator)
