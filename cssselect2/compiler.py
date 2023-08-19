@@ -30,8 +30,7 @@ def compile_selector_list(input, namespaces=None):
     """
     return [
         CompiledSelector(selector)
-        for selector in parser.parse(input, namespaces)
-    ]
+        for selector in parser.parse(input, namespaces)]
 
 
 class CompiledSelector:
@@ -203,24 +202,25 @@ def _compile_attribute(selector):
                 def key_func(_el):
                     return f'{{{selector.namespace}}}{selector.name}'
             else:
-                def key_func(el):
-                    return (lower if el.in_html_document else name)
                 lower = f'{{{selector.namespace}}}{selector.lower_name}'
                 name = f'{{{selector.namespace}}}{selector.name}'
+
+                def key_func(el):
+                    return lower if el.in_html_document else name
         else:
             if selector.name == selector.lower_name:
                 def key_func(_el):
                     return selector.name
             else:
+                lower, name = selector.lower_name, selector.name
+
                 def key_func(el):
                     return lower if el.in_html_document else name
-                lower, name = selector.lower_name, selector.name
         value = selector.value
         if selector.case_sensitive is False:
-            value = value.lower()
-
             def attribute_value(el):
                 return el.etree_element.get(key_func(el), '').lower()
+            value = value.lower()
         else:
             def attribute_value(el):
                 return el.etree_element.get(key_func(el), '')
@@ -241,15 +241,15 @@ def _compile_attribute(selector):
                     attribute_value(el).startswith(value + '-')))
         if selector.operator == '^=':
             if value:
-                return lambda el:  attribute_value(el).startswith(value)
+                return lambda el: attribute_value(el).startswith(value)
             return FALSE
         if selector.operator == '$=':
             return (
-                (lambda el:  attribute_value(el).endswith(value))
+                (lambda el: attribute_value(el).endswith(value))
                 if value else FALSE)
         if selector.operator == '*=':
             return (
-                (lambda el:  value in attribute_value(el)) if value else FALSE)
+                (lambda el: value in attribute_value(el)) if value else FALSE)
         raise SelectorError('Unknown attribute operator', selector.operator)
     # In any namespace
     raise NotImplementedError  # TODO
@@ -467,11 +467,11 @@ def _compile_node(selector):
 def html_tag_eq(*local_names):
     """Generate expression testing equality with HTML local names."""
     if len(local_names) == 1:
-        tag = '{http://www.w3.org/1999/xhtml}' + local_names[0]
+        tag = f'{{http://www.w3.org/1999/xhtml}}{local_names[0]}'
         return lambda el: (
             (el.local_name == local_names[0])
             if el.in_html_document else (el.etree_element.tag == tag))
-    tags = ('{http://www.w3.org/1999/xhtml}' + name for name in local_names)
+    tags = (f'{{http://www.w3.org/1999/xhtml}}{name}' for name in local_names)
     return lambda el: (
         (el.local_name in local_names)
         if el.in_html_document else (el.etree_element.tag in tags))
