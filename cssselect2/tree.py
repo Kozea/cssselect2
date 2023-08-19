@@ -110,7 +110,7 @@ class ElementWrapper:
 
     def __eq__(self, other):
         return (
-            type(self) == type(other) and
+            type(self) is type(other) and
             self.etree_element == other.etree_element)
 
     def __ne__(self, other):
