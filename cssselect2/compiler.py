@@ -139,7 +139,6 @@ def _compile_negation(selector):
 
 def _compile_relational(selector):
     sub_expressions = []
-
     for relative_selector in selector.selector_list:
         expression = _compile_node(relative_selector.selector.parsed_tree)
         if expression == FALSE:
@@ -177,7 +176,7 @@ def _compile_any(selector):
     return lambda el: any(expr(el) for expr in sub_expressions)
 
 
-def _compile_local_name(selector: parser.LocalNameSelector):
+def _compile_local_name(selector):
     if selector.lower_local_name == selector.local_name:
         return lambda el: el.local_name == selector.local_name
     return lambda el: el.local_name == (
@@ -185,19 +184,19 @@ def _compile_local_name(selector: parser.LocalNameSelector):
         else selector.local_name)
 
 
-def _compile_namespace(selector: parser.NamespaceSelector):
+def _compile_namespace(selector):
     return lambda el: el.namespace_url == selector.namespace
 
 
-def _compile_class(selector: parser.ClassSelector):
+def _compile_class(selector):
     return lambda el: selector.class_name in el.classes
 
 
-def _compile_id(selector: parser.IDSelector):
+def _compile_id(selector):
     return lambda el: el.id == selector.ident
 
 
-def _compile_attribute(selector: parser.AttributeSelector):
+def _compile_attribute(selector):
     if selector.namespace is not None:
         if selector.namespace:
             if selector.name == selector.lower_name:
@@ -256,7 +255,7 @@ def _compile_attribute(selector: parser.AttributeSelector):
     raise NotImplementedError  # TODO
 
 
-def _compile_pseudoclass(selector: parser.PseudoClassSelector):
+def _compile_pseudoclass(selector):
     if selector.name in ('link', 'any-link', 'local-link'):
         def test(el):
             return (
