@@ -220,10 +220,10 @@ def _compile_attribute(selector):
             value = value.lower()
 
             def attribute_value(el):
-                return el.etree_element.get(key_func(el), "").lower()
+                return el.etree_element.get(key_func(el), '').lower()
         else:
             def attribute_value(el):
-                return el.etree_element.get(key_func(el), "")
+                return el.etree_element.get(key_func(el), '')
         if selector.operator is None:
             return lambda el: key_func(el) in el.etree_element.attrib
         if selector.operator == '=':
@@ -238,7 +238,7 @@ def _compile_attribute(selector):
             return lambda el: (
                 key_func(el) in el.etree_element.attrib and (
                     attribute_value(el) == value or
-                    attribute_value(el).startswith(value + "-")))
+                    attribute_value(el).startswith(value + '-')))
         if selector.operator == '^=':
             if value:
                 return lambda el:  attribute_value(el).startswith(value)
@@ -260,34 +260,34 @@ def _compile_pseudoclass(selector):
         def test(el):
             return (
                 html_tag_eq('a', 'area', 'link')(el) and
-                el.etree_element.get("href") is not None)
+                el.etree_element.get('href') is not None)
         if selector.name == 'local-link':
             return lambda el: (
-                test(el) and not urlparse(el.etree_element.get("href")).scheme)
+                test(el) and not urlparse(el.etree_element.get('href')).scheme)
         return test
     if selector.name == 'enabled':
         return lambda el: (
             (html_tag_eq('button', 'input', 'select', 'textarea', 'option')(el)
-             and (el.etree_element.get("disabled") is None)
+             and (el.etree_element.get('disabled') is None)
              and not el.in_disabled_fieldset) or
             (html_tag_eq('optgroup', 'menuitem', 'fieldset')(el)
-             and el.etree_element.get("disabled") is None) or
+             and el.etree_element.get('disabled') is None) or
             (html_tag_eq('a', 'area', 'link')(el)
-             and el.etree_element.get("href") is not None))
+             and el.etree_element.get('href') is not None))
     if selector.name == 'disabled':
         return lambda el: (
             (html_tag_eq('button', 'input', 'select', 'textarea', 'option')(el)
-             and (el.etree_element.get("disabled") is not None
+             and (el.etree_element.get('disabled') is not None
                   or el.in_disabled_fieldset)) or
             (html_tag_eq('optgroup', 'menuitem', 'fieldset')(el)
-             and el.etree_element.get("disabled") is not None))
+             and el.etree_element.get('disabled') is not None))
     if selector.name == 'checked':
         return lambda el: (
             (html_tag_eq('input', 'menuitem')(el) and
-                el.etree_element.get("checked") is not None and
-                ascii_lower(el.etree_element.get("type", ""))
-             in ("checkbox", "radio")) or
-            (html_tag_eq('option')(el) and el.etree_element.get("selected")
+                el.etree_element.get('checked') is not None and
+                ascii_lower(el.etree_element.get('type', ''))
+             in ('checkbox', 'radio')) or
+            (html_tag_eq('option')(el) and el.etree_element.get('selected')
              is not None))
     if selector.name in (
             'visited', 'hover', 'active', 'focus', 'focus-within',
@@ -340,7 +340,7 @@ def _compile_lang(selector):
             if token.type != 'ident' and token.value != ',':
                 raise SelectorError('Invalid arguments for :lang()')
     return lambda el: any(
-        el.lang == lang or el.lang.startswith(lang + "-") for lang in langs)
+        el.lang == lang or el.lang.startswith(lang + '-') for lang in langs)
 
 
 def _compile_functional_pseudoclass(selector):
@@ -387,7 +387,7 @@ def _compile_functional_pseudoclass(selector):
             raise SelectorError('Unknown pseudo-class', selector.name)
 
         def count_func(el):
-            return count(el) if test(el) else float("nan")
+            return count(el) if test(el) else float('nan')
     else:
         if current_list is selector_list:
             raise SelectorError(
@@ -471,7 +471,7 @@ def html_tag_eq(*local_names):
         return lambda el: (
             (el.local_name == local_names[0])
             if el.in_html_document else (el.etree_element.tag == tag))
-    tags = ('{http://www.w3.org/1999/xhtml}' + n for n in local_names)
+    tags = ('{http://www.w3.org/1999/xhtml}' + name for name in local_names)
     return lambda el: (
         (el.local_name in local_names)
         if el.in_html_document else (el.etree_element.tag in tags))
