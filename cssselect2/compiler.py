@@ -37,7 +37,7 @@ class CompiledSelector:
     """Abstract representation of a selector."""
     def __init__(self, parsed_selector):
         source = _compile_node(parsed_selector.parsed_tree)
-        self.never_matches = source == FALSE
+        self.never_matches = source is FALSE
         self.test = source
         self.specificity = parsed_selector.specificity
         self.pseudo_element = parsed_selector.pseudo_element
@@ -76,9 +76,9 @@ def TRUE(_el):
 
 def _compile_combined(selector):
     left_inside = _compile_node(selector.left)
-    if left_inside == FALSE:
+    if left_inside is FALSE:
         return FALSE  # 0 and x == 0
-    if left_inside == TRUE:
+    if left_inside is TRUE:
         # 1 and x == x, but the element matching 1 still needs to exist.
         if selector.combinator in (' ', '>'):
             def left(el):
@@ -104,9 +104,9 @@ def _compile_combined(selector):
         raise SelectorError('Unknown combinator', selector.combinator)
 
     right = _compile_node(selector.right)
-    if right == FALSE:
+    if right is FALSE:
         return FALSE  # 0 and x == 0
-    if right == TRUE:
+    if right is TRUE:
         return left  # 1 and x == x
     # Evaluate combinators right to left
     return lambda el: right(el) and left(el)
@@ -115,7 +115,7 @@ def _compile_combined(selector):
 def _compile_compound(selector):
     sub_expressions = [
         expr for expr in map(_compile_node, selector.simple_selectors)
-        if expr != TRUE]
+        if expr is not TRUE]
     if len(sub_expressions) == 1:
         return sub_expressions[0]
     if FALSE in sub_expressions:
@@ -130,7 +130,7 @@ def _compile_negation(selector):
         expr for expr in [
             _compile_node(selector.parsed_tree)
             for selector in selector.selector_list]
-        if expr != TRUE]
+        if expr is not TRUE]
     if not sub_expressions:
         return FALSE
     return lambda el: not any(expr(el) for expr in sub_expressions)
@@ -140,7 +140,7 @@ def _compile_relational(selector):
     sub_expressions = []
     for relative_selector in selector.selector_list:
         expression = _compile_node(relative_selector.selector.parsed_tree)
-        if expression == FALSE:
+        if expression is FALSE:
             continue
         elif relative_selector.combinator == ' ':
             def sub_expression(el):
@@ -169,7 +169,7 @@ def _compile_any(selector):
         expr for expr in [
             _compile_node(selector.parsed_tree)
             for selector in selector.selector_list]
-        if expr != FALSE]
+        if expr is not FALSE]
     if not sub_expressions:
         return FALSE
     return lambda el: any(expr(el) for expr in sub_expressions)
