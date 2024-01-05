@@ -90,7 +90,7 @@ def _compile_combined(selector):
             raise SelectorError('Unknown combinator', selector.combinator)
     elif selector.combinator == ' ':
         def left(el):
-            return any((left_inside(e)) for e in el.ancestors)
+            return any((left_inside(el)) for el in el.ancestors)
     elif selector.combinator == '>':
         def left(el):
             return el.parent is not None and left_inside(el.parent)
@@ -99,7 +99,7 @@ def _compile_combined(selector):
             return el.previous is not None and left_inside(el.previous)
     elif selector.combinator == '~':
         def left(el):
-            return any((left_inside(e)) for e in el.previous_siblings)
+            return any((left_inside(el)) for el in el.previous_siblings)
     else:
         raise SelectorError('Unknown combinator', selector.combinator)
 
@@ -121,7 +121,7 @@ def _compile_compound(selector):
     if FALSE in sub_expressions:
         return FALSE
     if sub_expressions:
-        return lambda e: all(expr(e) for expr in sub_expressions)
+        return lambda el: all(expr(el) for expr in sub_expressions)
     return TRUE  # all([]) == True
 
 
@@ -147,16 +147,16 @@ def _compile_relational(selector):
                 sub_elements = el.iter_subtree()
                 # Skip self (only look at descendants)
                 next(sub_elements)
-                return any(expression(e) for e in sub_elements)
+                return any(expression(el) for el in sub_elements)
         elif relative_selector.combinator == '>':
             def sub_expression(el):
-                return any(expression(e) for e in el.iter_children())
+                return any(expression(el) for el in el.iter_children())
         elif relative_selector.combinator == '+':
             def sub_expression(el):
                 return expression(next(el.iter_next_siblings()))
         elif relative_selector.combinator == '~':
             def sub_expression(el):
-                return any(expression(e) for e in el.iter_next_siblings())
+                return any(expression(el) for el in el.iter_next_siblings())
         else:
             raise SelectorError(
                 'Unknown relational selector', {relative_selector.combinator})
@@ -365,23 +365,23 @@ def _compile_functional_pseudoclass(selector):
             for selector in parser.parse(selector_list))
         if selector.name == 'nth-child':
             def count(el):
-                return sum(1 for e in el.previous_siblings if test(e))
+                return sum(1 for el in el.previous_siblings if test(el))
         elif selector.name == 'nth-last-child':
             def count(el):
                 return sum(
-                    1 for e in tuple(el.iter_siblings())[el.index + 1:]
-                    if test(e))
+                    1 for el in tuple(el.iter_siblings())[el.index + 1:]
+                    if test(el))
         elif selector.name == 'nth-of-type':
             def count(el):
                 return sum(
-                    1 for s in (e for e in el.previous_siblings if test(e))
+                    1 for s in (el for el in el.previous_siblings if test(el))
                     if s.etree_element.tag == el.etree_element.tag)
         elif selector.name == 'nth-last-of-type':
             def count(el):
                 return sum(
                     1 for s in (
-                        e for e in tuple(el.iter_siblings())[el.index + 1:]
-                        if test(e))
+                        el for el in tuple(el.iter_siblings())[el.index + 1:]
+                        if test(el))
                     if s.etree_element.tag == el.etree_element.tag)
         else:
             raise SelectorError('Unknown pseudo-class', selector.name)
