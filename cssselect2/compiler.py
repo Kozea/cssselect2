@@ -114,15 +114,17 @@ def _compile_combined(selector):
 
 def _compile_compound(selector):
     sub_expressions = [
-        expr for expr in map(_compile_node, selector.simple_selectors)
+        expr for expr in [
+            _compile_node(selector)
+            for selector in selector.simple_selectors]
         if expr is not TRUE]
     if len(sub_expressions) == 1:
         return sub_expressions[0]
     if FALSE in sub_expressions:
         return FALSE
-    if sub_expressions:
-        return lambda el: all(expr(el) for expr in sub_expressions)
-    return TRUE  # all([]) == True
+    if not sub_expressions:
+        return TRUE  # all([]) == True
+    return lambda el: all(expr(el) for expr in sub_expressions)
 
 
 def _compile_negation(selector):
@@ -130,9 +132,11 @@ def _compile_negation(selector):
         expr for expr in [
             _compile_node(selector.parsed_tree)
             for selector in selector.selector_list]
-        if expr is not TRUE]
-    if not sub_expressions:
+        if expr is not FALSE]
+    if TRUE in sub_expressions:
         return FALSE
+    if not sub_expressions:
+        return TRUE  # not any([]) == True
     return lambda el: not any(expr(el) for expr in sub_expressions)
 
 
