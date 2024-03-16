@@ -10,7 +10,7 @@ if hasattr(functools, 'cached_property'):
     cached_property = functools.cached_property
 else:
     # Python 3.7
-    class cached_property:
+    class cached_property:  # noqa: N801
         # Borrowed from Werkzeug
         # https://github.com/mitsuhiko/werkzeug/blob/master/werkzeug/utils.py
 
@@ -132,8 +132,7 @@ class ElementWrapper:
         """
         if self._ancestors is None:
             self._ancestors = (
-                () if self.parent is None else
-                self.parent.ancestors + (self.parent,))
+                () if self.parent is None else (*self.parent.ancestors, self.parent))
         return self._ancestors
 
     @property
@@ -147,7 +146,7 @@ class ElementWrapper:
         if self._previous_siblings is None:
             self._previous_siblings = (
                 () if self.previous is None else
-                self.previous.previous_siblings + (self.previous,))
+                (*self.previous.previous_siblings, self.previous))
         return self._previous_siblings
 
     def iter_ancestors(self):
