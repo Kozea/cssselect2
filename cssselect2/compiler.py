@@ -66,11 +66,11 @@ class CompiledSelector:
                     self.requires_lang_attr = True
 
 
-def FALSE(_el):
+def FALSE(_el):  # noqa: N802
     return 0
 
 
-def TRUE(_el):
+def TRUE(_el):  # noqa: N802
     return 1
 
 
@@ -425,7 +425,7 @@ def _compile_functional_pseudoclass(selector):
     # Matches if a positive or zero integer n exists so that:
     # x = a*n + b-1
     # x = a*n + B
-    B = b - 1
+    B = b - 1  # noqa: N806
     if a == 0:
         # x = B
         return lambda el: count_func(el) == B

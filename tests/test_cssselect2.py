@@ -4,10 +4,11 @@ Test suite for cssselect2.
 
 """
 
-import xml.etree.ElementTree as etree
+import xml.etree.ElementTree as etree  # noqa: N813
 from pathlib import Path
 
 import pytest
+
 from cssselect2 import ElementWrapper, SelectorError, compile_selector_list
 
 from .w3_selectors import invalid_selectors, valid_selectors
