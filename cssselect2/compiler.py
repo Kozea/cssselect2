@@ -126,7 +126,8 @@ def _compile_node(selector):
     elif isinstance(selector, parser.CompoundSelector):
         sub_expressions = [
             expr for expr in [
-                _compile_node(selector) for selector in selector.simple_selectors]
+                _compile_node(selector)
+                for selector in selector.simple_selectors]
             if expr != '1']
         if len(sub_expressions) == 1:
             return sub_expressions[0]
@@ -409,7 +410,6 @@ def _compile_node(selector):
 
     else:
         raise TypeError(type(selector), selector)
-
 
 
 def html_tag_eq(*local_names):
