@@ -3,7 +3,7 @@ documents (HTML, XML, etc.) that can be read by ElementTree-like parsers
 (including cElementTree, lxml, html5lib, etc.)
 
 * Free software: BSD license
-* For Python 3.7+, tested on CPython and PyPy
+* For Python 3.8+, tested on CPython and PyPy
 * Documentation: https://doc.courtbouillon.org/cssselect2
 * Changelog: https://github.com/Kozea/cssselect2/releases
 * Code, issues, tests: https://github.com/Kozea/cssselect2
