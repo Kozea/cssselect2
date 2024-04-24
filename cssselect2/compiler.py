@@ -398,7 +398,7 @@ def _compile_node(selector):
             # Matches if a positive or zero integer n exists so that:
             # x = a*n + b-1
             # x = a*n + B
-            B = b - 1
+            B = b - 1  # noqa: N806
             if a == 0:
                 # x = B
                 return f'({count}) == {B}'
