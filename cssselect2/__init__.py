@@ -47,19 +47,17 @@ class Matcher:
             return
 
         entry = (
-            selector.test, selector.specificity, self.order,
-            selector.pseudo_element, payload)
+            selector.test, selector.specificity, self.order, selector.pseudo_element,
+            payload)
         if selector.id is not None:
             self.id_selectors.setdefault(selector.id, []).append(entry)
         elif selector.class_name is not None:
-            self.class_selectors.setdefault(
-                selector.class_name, []).append(entry)
+            self.class_selectors.setdefault(selector.class_name, []).append(entry)
         elif selector.local_name is not None:
             self.lower_local_name_selectors.setdefault(
                 selector.lower_local_name, []).append(entry)
         elif selector.namespace is not None:
-            self.namespace_selectors.setdefault(
-                selector.namespace, []).append(entry)
+            self.namespace_selectors.setdefault(selector.namespace, []).append(entry)
         elif selector.requires_lang_attr:
             self.lang_attr_selectors.append(entry)
         else:
@@ -87,8 +85,7 @@ class Matcher:
         for class_name in element.classes:
             if class_name in self.class_selectors:
                 self.add_relevant_selectors(
-                    element, self.class_selectors[class_name],
-                    relevant_selectors)
+                    element, self.class_selectors[class_name], relevant_selectors)
 
         lower_name = ascii_lower(element.local_name)
         if lower_name in self.lower_local_name_selectors:
@@ -104,8 +101,7 @@ class Matcher:
             self.add_relevant_selectors(
                 element, self.lang_attr_selectors, relevant_selectors)
 
-        self.add_relevant_selectors(
-            element, self.other_selectors, relevant_selectors)
+        self.add_relevant_selectors(element, self.other_selectors, relevant_selectors)
 
         relevant_selectors.sort()
         return relevant_selectors
@@ -114,5 +110,4 @@ class Matcher:
     def add_relevant_selectors(element, selectors, relevant_selectors):
         for test, specificity, order, pseudo, payload in selectors:
             if test(element):
-                relevant_selectors.append(
-                    (specificity, order, pseudo, payload))
+                relevant_selectors.append((specificity, order, pseudo, payload))

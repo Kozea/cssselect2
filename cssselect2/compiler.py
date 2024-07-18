@@ -28,9 +28,7 @@ def compile_selector_list(input, namespaces=None):
         A list of opaque :class:`compiler.CompiledSelector` objects.
 
     """
-    return [
-        CompiledSelector(selector)
-        for selector in parser.parse(input, namespaces)]
+    return [CompiledSelector(selector) for selector in parser.parse(input, namespaces)]
 
 
 class CompiledSelector:
@@ -239,8 +237,7 @@ def _compile_node(selector):
             elif selector.operator == '*=':
                 return f'{value!r} in {attribute_value}' if value else '0'
             else:
-                raise SelectorError(
-                    'Unknown attribute operator', selector.operator)
+                raise SelectorError('Unknown attribute operator', selector.operator)
         else:  # In any namespace
             raise NotImplementedError  # TODO
 

@@ -53,8 +53,7 @@ class ElementWrapper:
             root = root.getroot()
         return cls(
             root, parent=None, index=0, previous=None,
-            in_html_document=in_html_document,
-            content_language=content_language)
+            in_html_document=in_html_document, content_language=content_language)
 
     def __init__(self, etree_element, parent, index, previous,
                  in_html_document, content_language=None):
@@ -330,8 +329,7 @@ class ElementWrapper:
     def lang(self):
         """The language of this element, as a string."""
         # http://whatwg.org/C#language
-        xml_lang = self.etree_element.get(
-            '{http://www.w3.org/XML/1998/namespace}lang')
+        xml_lang = self.etree_element.get('{http://www.w3.org/XML/1998/namespace}lang')
         if xml_lang is not None:
             return ascii_lower(xml_lang)
         is_html = (
@@ -346,13 +344,11 @@ class ElementWrapper:
         # Root elememnt
         if is_html:
             content_language = None
-            iterator = self.etree_element.iter(
-                '{http://www.w3.org/1999/xhtml}meta')
+            iterator = self.etree_element.iter('{http://www.w3.org/1999/xhtml}meta')
             for meta in iterator:
                 http_equiv = meta.get('http-equiv', '')
                 if ascii_lower(http_equiv) == 'content-language':
-                    content_language = _parse_content_language(
-                        meta.get('content'))
+                    content_language = _parse_content_language(meta.get('content'))
             if content_language is not None:
                 return ascii_lower(content_language)
         # Empty string means unknown

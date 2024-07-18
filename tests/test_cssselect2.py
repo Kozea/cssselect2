@@ -75,8 +75,7 @@ def test_valid_selectors(test):
     result = [element.id for element in root.query_all(test['selector'])]
     if result != test['expect']:  # pragma: no cover
         raise AssertionError(
-            f'{test["selector"]!r}: {result} != {test["expect"]} '
-            f'({test["name"]})')
+            f'{test["selector"]!r}: {result} != {test["expect"]} ({test["name"]})')
 
 
 def test_lang():
