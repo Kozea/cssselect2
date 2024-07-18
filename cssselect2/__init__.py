@@ -6,8 +6,6 @@ documents (HTML, XML, etc.) that can be read by ElementTree-like parsers
 
 """
 
-import operator
-
 from webencodings import ascii_lower
 
 # Classes are imported here to expose them at the top level of the module
@@ -109,7 +107,7 @@ class Matcher:
         self.add_relevant_selectors(
             element, self.other_selectors, relevant_selectors)
 
-        relevant_selectors.sort(key=SORT_KEY)
+        relevant_selectors.sort()
         return relevant_selectors
 
     @staticmethod
@@ -118,6 +116,3 @@ class Matcher:
             if test(element):
                 relevant_selectors.append(
                     (specificity, order, pseudo, payload))
-
-
-SORT_KEY = operator.itemgetter(0, 1)
