@@ -38,10 +38,11 @@ pygments_style = 'monokai'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'furo'
 
 html_theme_options = {
-    'collapse_navigation': False,
+    'top_of_page_buttons': ['edit'],
+    'source_edit_link': 'https://github.com/Kozea/cssselect2/edit/main/docs/{filename}',
 }
 
 # Favicon URL
@@ -55,7 +56,7 @@ html_static_path = []
 # These paths are either relative to html_static_path
 # or fully qualified paths (eg. https://...)
 html_css_files = [
-    'https://www.courtbouillon.org/static/docs.css',
+    'https://www.courtbouillon.org/static/docs-furo.css',
 ]
 
 # Output file base name for HTML help builder.

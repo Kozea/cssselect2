@@ -7,14 +7,14 @@ cssselect2
 
 .. toctree::
    :caption: Documentation
-   :maxdepth: 3
+   :maxdepth: 2
 
    first_steps
    api_reference
 
 .. toctree::
    :caption: Extra Information
-   :maxdepth: 3
+   :maxdepth: 2
 
    changelog
    contribute
