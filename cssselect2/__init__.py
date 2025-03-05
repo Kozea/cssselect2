@@ -13,7 +13,7 @@ from .compiler import compile_selector_list  # noqa
 from .parser import SelectorError  # noqa
 from .tree import ElementWrapper  # noqa
 
-VERSION = __version__ = '0.7.0'
+VERSION = __version__ = '0.8.0'
 
 
 class Matcher:

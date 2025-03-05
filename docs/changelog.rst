@@ -2,6 +2,15 @@ Changelog
 ---------
 
 
+Version 0.8.0
+.............
+
+Released on 2025-03-05.
+
+* Drop support of Python 3.8 and 3.9, support 3.12 and 3.13
+* Handle case-sensitive and case-insensitive attribute selectors
+
+
 Version 0.7.0
 .............
 
