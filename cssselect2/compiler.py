@@ -279,7 +279,7 @@ def _compile_node(selector):
                 'focus-visible', 'target', 'target-within', 'current', 'past',
                 'future', 'playing', 'paused', 'seeking', 'buffering',
                 'stalled', 'muted', 'volume-locked', 'user-valid',
-                'user-invalid'):
+                'user-invalid', 'host'):
             # Not applicable in a static context: never match.
             return '0'
         elif selector.name in ('root', 'scope'):

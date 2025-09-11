@@ -301,6 +301,7 @@ def test_lang():
     (':active', []),
     (':focus', []),
     (':target', []),
+    (':host', []),
     (':enabled', [
         'link-href', 'tag-anchor', 'nofollow-anchor', 'checkbox-unchecked',
         'text-checked', 'input-hidden', 'checkbox-checked', 'area-href']),
