@@ -34,15 +34,14 @@ html_tree = ElementTree.fromstring('''
 wrapper = cssselect2.ElementWrapper.from_html_root(html_tree)
 for element in wrapper.iter_subtree():
     tag = element.etree_element.tag.split('}')[-1]
-    print('Found tag "{}" in HTML'.format(tag))
+    print(f'Found tag "{tag}" in HTML')
 
     matches = matcher.match(element)
     if matches:
         for match in matches:
             specificity, order, pseudo, payload = match
             selector_string, content_string = payload
-            print('Matching selector "{}" ({})'.format(
-                selector_string, content_string))
+            print(f'Matching selector "{selector_string}" ({content_string})')
     else:
         print('No rule matching this tag')
     print()

@@ -119,7 +119,7 @@ def test_lang():
     assert not root.matches(':lang(en)')
 
 
-@pytest.mark.parametrize('selector, result', (
+@pytest.mark.parametrize(('selector', 'result'), [
     ('*', ALL_IDS),
     ('div', ['outer-div', 'li-div', 'foobar-div']),
     ('div div', ['li-div']),
@@ -228,7 +228,6 @@ def test_lang():
     ('*#first-li', ['first-li']),
     ('li div', ['li-div']),
     ('li > div', ['li-div']),
-    ('div div', ['li-div']),
     ('div > div', []),
     ('div>.c', ['first-ol']),
     ('div > .c', ['first-ol']),
@@ -320,7 +319,7 @@ def test_lang():
     ('/* test */a:not([href])/* test */,div  div', ['name-anchor', 'li-div']),
     ('/* test */ a:not([href]), div/* test */ div', ['name-anchor', 'li-div']),
     ('a:not([href]) /* test */,/* test */div  div', ['name-anchor', 'li-div']),
-))
+])
 def test_select(selector, result):
     xml_ids = [
         element.etree_element.get('id', 'nil') for element in
@@ -331,12 +330,12 @@ def test_select(selector, result):
     assert xml_ids == html_ids == result
 
 
-@pytest.mark.parametrize('selector, result', (
+@pytest.mark.parametrize(('selector', 'result'), [
     ('DIV', ['outer-div', 'li-div', 'foobar-div']),
     ('a[NAme]', ['name-anchor']),
     ('HTML :link', [
         'link-href', 'tag-anchor', 'nofollow-anchor', 'area-href']),
-))
+])
 def test_html_select(selector, result):
     assert not [
         element.etree_element.get('id', 'nil') for element in
@@ -347,7 +346,7 @@ def test_html_select(selector, result):
 
 
 # Data borrowed from http://mootools.net/slickspeed/
-@pytest.mark.parametrize('selector, result', (
+@pytest.mark.parametrize(('selector', 'result'), [
     # Changed from original because we’re only searching the body.
     # ('*', 252),
     ('*', 246),
@@ -396,6 +395,6 @@ def test_html_select(selector, result):
     ('div[class|=dialog]', 50),  # ? Seems right
     # assert count('div[class!=madeup]', 243),  # ? Seems right
     ('div[class~=dialog]', 51),  # ? Seems right
-))
+])
 def test_select_shakespeare(selector, result):
     assert sum(1 for _ in SHAKESPEARE_BODY.query_all(selector)) == result

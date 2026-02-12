@@ -305,14 +305,14 @@ class ElementWrapper:
     def local_name(self):
         """The local name of this element, as a string."""
         namespace_url, local_name = _split_etree_tag(self.etree_element.tag)
-        self.__dict__[str('namespace_url')] = namespace_url
+        self.__dict__['namespace_url'] = namespace_url
         return local_name
 
     @cached_property
     def namespace_url(self):
         """The namespace URL of this element, as a string."""
         namespace_url, local_name = _split_etree_tag(self.etree_element.tag)
-        self.__dict__[str('local_name')] = local_name
+        self.__dict__['local_name'] = local_name
         return namespace_url
 
     @cached_property
