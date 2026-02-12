@@ -2,6 +2,15 @@ Changelog
 ---------
 
 
+Version 0.9.0
+.............
+
+Released on 2026-02-12.
+
+* Drop support of Python 3.9, support 3.14
+* Support :host
+
+
 Version 0.8.0
 .............
 
