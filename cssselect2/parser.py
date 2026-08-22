@@ -9,6 +9,8 @@ SUPPORTED_PSEUDO_ELEMENTS = {
     'marker', 'placeholder', 'file-selector-button',
     # As per CSS Generated Content for Paged Media Module
     'footnote-call', 'footnote-marker',
+    # As per CSS Notes
+    'note-call', 'note-marker', 'note-callback',
     # As per CSS Scoping Module Level 1
     'content', 'shadow',
 }
