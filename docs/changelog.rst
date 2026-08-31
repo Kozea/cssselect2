@@ -2,6 +2,14 @@ Changelog
 ---------
 
 
+Version 0.10.1
+..............
+
+Released on 2026-08-31.
+
+* Fix packaging
+
+
 Version 0.10.0
 ..............
 
