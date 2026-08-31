@@ -2,6 +2,14 @@ Changelog
 ---------
 
 
+Version 0.10.0
+..............
+
+Released on 2026-08-31.
+
+* Support CSS Notes
+
+
 Version 0.9.0
 .............
 
