@@ -150,8 +150,6 @@ def _compile_node(selector):
         sub_expressions = []
         for relative_selector in selector.selector_list:
             expression = _compile_node(relative_selector.selector.parsed_tree)
-            if expression == '0':
-                continue
             if relative_selector.combinator == ' ':
                 elements = 'list(el.iter_subtree())[1:]'
             elif relative_selector.combinator == '>':

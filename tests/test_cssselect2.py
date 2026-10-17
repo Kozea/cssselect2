@@ -271,6 +271,7 @@ def test_lang():
     ('input:where([type="text"])', ['text-checked']),
     ('div:where(:not(#outer-div))', ['li-div', 'foobar-div']),
     ('div:where(div::before)', []),
+    (':has(:hover)', []),
     ('p:has(input)', ['paragraph']),
     ('p:has(fieldset input)', ['paragraph']),
     ('p:has(> fieldset)', ['paragraph']),
