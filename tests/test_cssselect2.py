@@ -346,6 +346,45 @@ def test_html_select(selector, result):
         ElementWrapper.from_html_root(IDS_ROOT).query_all(selector)]
 
 
+@pytest.mark.parametrize('wrapper', [
+    ElementWrapper.from_xml_root, ElementWrapper.from_html_root])
+@pytest.mark.parametrize(('operator', 'value'), [
+    ('=', 'Éa'), ('~=', 'before Éa after'), ('|=', 'Éa-fr'),
+    ('^=', 'Éa-after'), ('$=', 'before-Éa'), ('*=', 'before-Éa-after'),
+])
+def test_attribute_case_insensitive_ascii_only(wrapper, operator, value):
+    document = etree.Element('div')
+    etree.SubElement(document, 'div', {'id': 'upper', 'data-value': value})
+    etree.SubElement(document, 'div', {
+        'id': 'lower', 'data-value': value.replace('É', 'é')})
+    root = wrapper(document)
+    assert [element.id for element in root.query_all(
+        f'[data-value{operator}"ÉA" i]')] == ['upper']
+    assert [element.id for element in root.query_all(
+        f'[data-value{operator}"éA" i]')] == ['lower']
+
+
+@pytest.mark.parametrize('wrapper', [
+    ElementWrapper.from_xml_root, ElementWrapper.from_html_root])
+@pytest.mark.parametrize(('operator', 'value', 'selector_value'), [
+    ('=', 'K', 'k'), ('=', 'k', 'K'), ('*=', 'İ', 'i'),
+])
+def test_attribute_case_insensitive_non_ascii_to_ascii(
+        wrapper, operator, value, selector_value):
+    root = wrapper(etree.Element('div', {'data-value': value}))
+    assert not root.matches(f'[data-value{operator}"{selector_value}" i]')
+
+
+@pytest.mark.parametrize('wrapper', [
+    ElementWrapper.from_xml_root, ElementWrapper.from_html_root])
+@pytest.mark.parametrize(('flag', 'matches'), [
+    ('', False), ('s', False), ('S', False), ('i', True), ('I', True),
+])
+def test_attribute_case_flags_ascii_controls(wrapper, flag, matches):
+    root = wrapper(etree.Element('div', {'data-value': 'AbC'}))
+    assert root.matches(f'[data-value="abc" {flag}]') is matches
+
+
 # Data borrowed from http://mootools.net/slickspeed/
 @pytest.mark.parametrize(('selector', 'result'), [
     # Changed from original because we’re only searching the body.

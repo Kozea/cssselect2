@@ -207,8 +207,8 @@ def _compile_node(selector):
             value = selector.value
             attribute_value = f'el.etree_element.get({key}, "")'
             if selector.case_sensitive is False:
-                value = value.lower()
-                attribute_value += '.lower()'
+                value = ascii_lower(value)
+                attribute_value = f'ascii_lower({attribute_value})'
             if selector.operator is None:
                 return f'{key} in el.etree_element.attrib'
             elif selector.operator == '=':
